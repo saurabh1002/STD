@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from typing import NoReturn, Tuple
+from typing import Tuple
 
 import numpy as np
 from pydantic import BaseSettings
@@ -29,7 +29,7 @@ from . import stdesc_pybind
 
 
 class STDesc:
-    def __init__(self, config: BaseSettings) -> NoReturn:
+    def __init__(self, config: BaseSettings):
         self._config = config
         self._pipeline = stdesc_pybind._STDescManager(self._config.dict())
 
