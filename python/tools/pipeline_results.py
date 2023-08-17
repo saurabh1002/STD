@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 import os
-from typing import Dict, NoReturn, Set, Tuple
+from typing import Dict, Set, Tuple
 
 import numpy as np
 from rich import box
@@ -40,7 +40,7 @@ class Metrics:
 
 
 class PipelineResults:
-    def __init__(self, gt_closures: np.ndarray, dataset_name: str, stdesc_thresholds) -> NoReturn:
+    def __init__(self, gt_closures: np.ndarray, dataset_name: str, stdesc_thresholds):
         self._dataset_name = dataset_name
         self.stdesc_thresholds = stdesc_thresholds
 
@@ -53,18 +53,18 @@ class PipelineResults:
         gt_closures = gt_closures if gt_closures.shape[1] == 2 else gt_closures.T
         self.gt_closures: Set[Tuple[int]] = set(map(lambda x: tuple(sorted(x)), gt_closures))
 
-    def print(self) -> NoReturn:
+    def print(self):
         if self.metrics:
             self.log_to_console()
 
-    def append(self, query_idx: int, nn_idx: int, scores: float) -> NoReturn:
+    def append(self, query_idx: int, nn_idx: int, scores: float):
         indices = np.where(scores > self.stdesc_thresholds)[0]
         for index in indices:
             self.predicted_closures[self.stdesc_thresholds[index]].add((nn_idx, query_idx))
 
     def compute_metrics(
         self,
-    ) -> NoReturn:
+    ):
         for key in self.stdesc_thresholds:
             closures = self.predicted_closures[key]
             closures = set(map(lambda x: tuple(sorted(x)), closures))
@@ -95,16 +95,16 @@ class PipelineResults:
             )
         return table
 
-    def log_to_console(self) -> NoReturn:
+    def log_to_console(self):
         console = Console()
         console.print(self._rich_table_pr())
 
-    def log_to_file_pr(self, filename) -> NoReturn:
+    def log_to_file_pr(self, filename):
         with open(filename, "wt") as logfile:
             console = Console(file=logfile, width=100, force_jupyter=False)
             console.print(self._rich_table_pr(table_format=box.ASCII_DOUBLE_HEAD))
 
-    def log_to_file_closures(self, result_dir) -> NoReturn:
+    def log_to_file_closures(self, result_dir):
         np.save(
             os.path.join(result_dir, f"predicted_closures.npy"),
             self.predicted_closures,

@@ -23,7 +23,7 @@
 import datetime
 import os
 from pathlib import Path
-from typing import NoReturn, Optional
+from typing import Optional
 
 import numpy as np
 
@@ -72,10 +72,10 @@ class STDescPipeline:
             if closure_idx != -1:
                 self.results.append(query_idx, closure_idx, score)
 
-    def _run_evaluation(self) -> NoReturn:
+    def _run_evaluation(self):
         self.results.compute_metrics()
 
-    def _log_to_file(self) -> NoReturn:
+    def _log_to_file(self):
         self.results_dir = self._create_results_dir()
         if self.gt_closure_indices is not None:
             self.results.log_to_file_pr(os.path.join(self.results_dir, "metrics.txt"))
