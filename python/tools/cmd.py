@@ -49,7 +49,7 @@ docstring = f"""
 \b
 [bold green]Examples: [/bold green]
 # Use a specific dataloader: {", ".join(_available_dl_help)}
-$ scan_context_pipeline --dataloader kitti --sequence 07 --visualize <path-to-kitti-root>:open_file_folder:
+$ stdesc_pipeline --dataloader mulran --gt-overlap-threshold 0.5 --visualize <path-to-mulran-root> <path-to-save-results>:
 """
 
 
