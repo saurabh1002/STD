@@ -27,7 +27,7 @@ from typing import Optional
 
 import typer
 
-from python.datasets import available_dataloaders, sequence_dataloaders
+from python.datasets import available_dataloaders
 
 
 def name_callback(value: str):
@@ -60,6 +60,12 @@ def stdesc_pipeline(
         help="The data directory used by the specified dataloader",
         show_default=False,
     ),
+    results_dir: Path = typer.Argument(
+        ...,
+        help="The path where results are to be stored",
+        show_default=False,
+        exists=False,
+    ),
     dataloader: str = typer.Option(
         None,
         show_default=False,
@@ -91,11 +97,6 @@ def stdesc_pipeline(
         rich_help_panel="Additional Options",
     ),
 ):
-    # Validate some options
-    if dataloader in sequence_dataloaders() and sequence is None:
-        print('You must specify a sequence "--sequence"')
-        raise typer.Exit(code=1)
-
     # Lazy-loading for faster CLI
     from python.datasets import dataset_factory
     from python.pipeline import STDescPipeline
@@ -108,6 +109,7 @@ def stdesc_pipeline(
             # Additional options
             sequence=sequence,
         ),
+        results_dir=results_dir,
         config=config,
     ).run().print()
 

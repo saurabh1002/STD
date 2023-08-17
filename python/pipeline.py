@@ -37,17 +37,18 @@ class STDescPipeline:
     def __init__(
         self,
         dataset,
+        results_dir,
         config: Optional[Path] = None,
     ):
         self._dataset = dataset
         self._first = 0
         self._last = len(self._dataset)
 
-        self.results_dir = None
+        self.results_dir = results_dir
         self.config = load_config(config)
         self.std_desc = STDesc(self.config)
 
-        self.dataset_name = self._dataset.__class__.__name__
+        self.dataset_name = self._dataset.sequence_id
 
         self.gt_closure_indices = self._dataset.gt_closure_indices
 
@@ -84,8 +85,10 @@ class STDescPipeline:
         def get_timestamp() -> str:
             return datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
-        results_dir = os.path.join(self._dataset.data_dir, "stdesc_results", get_timestamp())
-        latest_dir = os.path.join(self._dataset.data_dir, "stdesc_results", "latest")
+        results_dir = os.path.join(
+            self.results_dir, "stdesc_results", self.dataset_name, get_timestamp()
+        )
+        latest_dir = os.path.join(self.results_dir, "stdesc_results", self.dataset_name, "latest")
         os.makedirs(results_dir, exist_ok=True)
         os.unlink(latest_dir) if os.path.exists(latest_dir) or os.path.islink(latest_dir) else None
         os.symlink(results_dir, latest_dir)
