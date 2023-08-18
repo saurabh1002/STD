@@ -41,5 +41,5 @@ set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-add_subdirectory(${PROJECT_SOURCE_DIR}/STD)
+add_subdirectory(${PROJECT_SOURCE_DIR}/cpp)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/pybind)

@@ -27,7 +27,7 @@ from typing import Optional
 
 import typer
 
-from python.datasets import available_dataloaders
+from stdesc.datasets import available_dataloaders
 
 
 def name_callback(value: str):
@@ -98,8 +98,8 @@ def stdesc_pipeline(
     ),
 ):
     # Lazy-loading for faster CLI
-    from python.datasets import dataset_factory
-    from python.pipeline import STDescPipeline
+    from stdesc.datasets import dataset_factory
+    from stdesc.pipeline import STDescPipeline
 
     STDescPipeline(
         dataset=dataset_factory(

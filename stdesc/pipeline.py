@@ -28,9 +28,9 @@ from typing import Optional
 import numpy as np
 
 from pybind.stdesc import STDesc
-from python.config import load_config
-from python.tools.pipeline_results import PipelineResults
-from python.tools.progress_bar import get_progress_bar
+from stdesc.config import load_config
+from stdesc.tools.pipeline_results import PipelineResults
+from stdesc.tools.progress_bar import get_progress_bar
 
 
 class STDescPipeline:
