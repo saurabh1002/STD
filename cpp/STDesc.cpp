@@ -14,19 +14,17 @@
 
 #include "omp.h"
 
-void down_sampling_voxel(pcl::PointCloud<pcl::PointXYZI> &pl_feat, double voxel_size) {
-    int intensity = rand() % 255;
+void down_sampling_voxel(std::vector<Eigen::Vector3d> &pl_feat, double voxel_size) {
     if (voxel_size < 0.01) {
         return;
     }
     std::unordered_map<VOXEL_LOC, M_POINT> voxel_map;
     uint plsize = pl_feat.size();
 
-    for (uint i = 0; i < plsize; i++) {
-        pcl::PointXYZI &p_c = pl_feat[i];
+    for (const Eigen::Vector3d &point : pl_feat) {
         float loc_xyz[3];
         for (int j = 0; j < 3; j++) {
-            loc_xyz[j] = p_c.data[j] / voxel_size;
+            loc_xyz[j] = point[j] / voxel_size;
             if (loc_xyz[j] < 0) {
                 loc_xyz[j] -= 1.0;
             }
@@ -35,17 +33,17 @@ void down_sampling_voxel(pcl::PointCloud<pcl::PointXYZI> &pl_feat, double voxel_
         VOXEL_LOC position((int64_t)loc_xyz[0], (int64_t)loc_xyz[1], (int64_t)loc_xyz[2]);
         auto iter = voxel_map.find(position);
         if (iter != voxel_map.end()) {
-            iter->second.xyz[0] += p_c.x;
-            iter->second.xyz[1] += p_c.y;
-            iter->second.xyz[2] += p_c.z;
-            iter->second.intensity += p_c.intensity;
+            iter->second.xyz[0] += point.x();
+            iter->second.xyz[1] += point.y();
+            iter->second.xyz[2] += point.z();
+            iter->second.intensity += 0;
             iter->second.count++;
         } else {
             M_POINT anp;
-            anp.xyz[0] = p_c.x;
-            anp.xyz[1] = p_c.y;
-            anp.xyz[2] = p_c.z;
-            anp.intensity = p_c.intensity;
+            anp.xyz[0] = point.x();
+            anp.xyz[1] = point.y();
+            anp.xyz[2] = point.z();
+            anp.intensity = 0;
             anp.count = 1;
             voxel_map[position] = anp;
         }
@@ -56,10 +54,10 @@ void down_sampling_voxel(pcl::PointCloud<pcl::PointXYZI> &pl_feat, double voxel_
 
     uint i = 0;
     for (auto iter = voxel_map.begin(); iter != voxel_map.end(); ++iter) {
-        pl_feat[i].x = iter->second.xyz[0] / iter->second.count;
-        pl_feat[i].y = iter->second.xyz[1] / iter->second.count;
-        pl_feat[i].z = iter->second.xyz[2] / iter->second.count;
-        pl_feat[i].intensity = iter->second.intensity / iter->second.count;
+        auto x = iter->second.xyz[0] / iter->second.count;
+        auto y = iter->second.xyz[1] / iter->second.count;
+        auto z = iter->second.xyz[2] / iter->second.count;
+        pl_feat[i] = Eigen::Vector3d(x, y, z);
         i++;
     }
 }
@@ -1179,27 +1177,24 @@ void STDescManager::PlaneGeomrtricIcp(
     transform.second = rot;
 }
 
-std::pair<int, double> STDescManager::ProcessNewScan(const std::vector<Eigen::Vector3d> &pcl,
-                                                     int CloudInd) {
+std::tuple<int, double, Eigen::Vector3d, Eigen::Matrix3d> STDescManager::ProcessNewScan(
+    const std::vector<Eigen::Vector3d> &pcl) {
     pcl::PointCloud<pcl::PointXYZI>::Ptr current_cloud = EigenToPCL(pcl);
-    down_sampling_voxel(*current_cloud, config_setting_.ds_size_);
     std::pair<int, double> search_result(-1, 0);
-    if (CloudInd % config_setting_.sub_frame_num_ == 0 && CloudInd != 0) {
-        std::vector<STDesc> stds_vec;
-        this->GenerateSTDescs(current_cloud, stds_vec);
-        std::pair<Eigen::Vector3d, Eigen::Matrix3d> loop_transform;
-        loop_transform.first << 0, 0, 0;
-        loop_transform.second = Eigen::Matrix3d::Identity();
-        std::vector<std::pair<STDesc, STDesc>> loop_std_pair;
+    std::vector<STDesc> stds_vec;
+    this->GenerateSTDescs(current_cloud, stds_vec);
+    std::pair<Eigen::Vector3d, Eigen::Matrix3d> loop_transform;
+    loop_transform.first << 0, 0, 0;
+    loop_transform.second = Eigen::Matrix3d::Identity();
+    std::vector<std::pair<STDesc, STDesc>> loop_std_pair;
 
-        if (keyCloudInd > config_setting_.skip_near_num_) {
-            this->SearchLoop(stds_vec, search_result, loop_transform, loop_std_pair);
-        }
-        this->AddSTDescs(stds_vec);
-        this->key_cloud_vec_.push_back((*current_cloud).makeShared());
-        keyCloudInd++;
+    if (keyCloudInd > config_setting_.skip_near_num_) {
+        this->SearchLoop(stds_vec, search_result, loop_transform, loop_std_pair);
     }
-    return search_result;
+    this->AddSTDescs(stds_vec);
+    this->key_cloud_vec_.push_back((*current_cloud).makeShared());
+    keyCloudInd++;
+    return {search_result.first, search_result.second, loop_transform.first, loop_transform.second};
 }
 
 void OctoTree::init_plane() {

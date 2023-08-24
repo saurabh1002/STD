@@ -26,11 +26,20 @@ from pathlib import Path
 from typing import Optional
 
 import numpy as np
+from kiss_icp.config import KISSConfig
+from kiss_icp.kiss_icp import KissICP
+from kiss_icp.voxelization import voxel_down_sample
 
 from pybind.stdesc import STDesc
 from stdesc.config import load_config
-from stdesc.tools.pipeline_results import PipelineResults
+from stdesc.tools.pipeline_results import LocalMapPair, PipelineResults
 from stdesc.tools.progress_bar import get_progress_bar
+
+
+def transform_points(pcd, T):
+    R = T[:3, :3]
+    t = T[:3, -1]
+    return pcd @ R.T + t
 
 
 class STDescPipeline:
@@ -44,17 +53,24 @@ class STDescPipeline:
         self._first = 0
         self._last = len(self._dataset)
 
+        self._kiss_config = KISSConfig()
+        self._kiss_config.mapping.voxel_size = self._kiss_config.data.max_range / 100.0
+        self._odometry = KissICP(self._kiss_config)
+
         self.results_dir = results_dir
         self.config = load_config(config)
         self.std_desc = STDesc(self.config)
+
+        self.map_scan_indices = []
+        self.map_scan_poses = []
 
         self.dataset_name = self._dataset.sequence_id
 
         self.gt_closure_indices = self._dataset.gt_closure_indices
 
-        stdesc_thresholds = np.arange(0.1, 1.0, 0.1)
+        self.closure_distance_thresholds = np.arange(1, 16)
         self.results = PipelineResults(
-            self.gt_closure_indices, self.dataset_name, stdesc_thresholds
+            self.gt_closure_indices, self.dataset_name, self.closure_distance_thresholds
         )
 
     def run(self):
@@ -66,14 +82,46 @@ class STDescPipeline:
         return self.results
 
     def _run_pipeline(self):
-        for query_idx in get_progress_bar(self._first, self._last):
-            scan = self._dataset[query_idx]
-            closure_idx, score = self.std_desc.process_new_scan(scan, query_idx)
-            if closure_idx != -1:
-                self.results.append(query_idx, closure_idx, score)
+        temp_cloud = []
+        query_scan_indices = []
+        query_scan_poses = []
+        query_idx = 0
+
+        for i in get_progress_bar(self._first, self._last):
+            scan = self._dataset[i]
+            self._odometry.register_frame(scan, 0)
+            pose = self._odometry.poses[-1]
+            frame_downsample = voxel_down_sample(scan, self.config.ds_size)
+            temp_cloud.append(transform_points(frame_downsample, pose))
+            if ((i + 1) % self.config.sub_frame_num) == 0:
+                query_scan_indices.append(i)
+                query_scan_poses.append(pose)
+                self.map_scan_indices.append(np.array(query_scan_indices))
+                self.map_scan_poses.append(np.array(query_scan_poses))
+
+                ref_idx, score, relative_tf = self.std_desc.process_new_scan(
+                    np.concatenate(temp_cloud)
+                )
+                if ref_idx != -1:
+                    local_map_pairs = LocalMapPair(
+                        self.map_scan_indices[ref_idx],
+                        self.map_scan_indices[query_idx],
+                        self.map_scan_poses[ref_idx],
+                        self.map_scan_poses[query_idx],
+                        relative_tf,
+                        self.closure_distance_thresholds,
+                    )
+                    self.results.append(local_map_pairs._scan_level_closures, score)
+                temp_cloud.clear()
+                query_scan_indices.clear()
+                query_scan_poses.clear()
+                query_idx += 1
+            else:
+                query_scan_indices.append(i)
+                query_scan_poses.append(pose)
 
     def _run_evaluation(self):
-        self.results.compute_metrics()
+        self.results.compute_closures_and_metrics()
 
     def _log_to_file(self):
         self.results_dir = self._create_results_dir()

@@ -33,7 +33,16 @@ class STDesc:
         self._config = config
         self._pipeline = stdesc_pybind._STDescManager(self._config.dict())
 
-    def process_new_scan(self, scan: np.ndarray, cloud_idx: int) -> Tuple[int, float]:
+    def process_new_scan(self, scan: np.ndarray) -> Tuple[int, float]:
         scan = stdesc_pybind._VectorEigen3d(scan)
-        closure_idx, score = self._pipeline._ProcessNewScan(scan, cloud_idx)
-        return closure_idx, score
+        closure_idx, score, t, R = self._pipeline._ProcessNewScan(scan)
+        T = np.eye(4)
+        T[:3, :3] = R
+        T[:3, -1] = t
+        return closure_idx, score, T
+
+
+def voxel_down_sample(scan: np.ndarray, voxel_size: float) -> np.ndarray:
+    scan = stdesc_pybind._VectorEigen3d(scan)
+    stdesc_pybind._VoxelDownSample(scan, voxel_size)
+    return np.asarray(scan)

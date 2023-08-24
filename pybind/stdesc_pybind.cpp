@@ -79,6 +79,8 @@ PYBIND11_MODULE(stdesc_pybind, m) {
         m, "_VectorEigen3d", "std::vector<Eigen::Vector3d>",
         py::py_array_to_vectors_double<Eigen::Vector3d>);
 
+    m.def("_VoxelDownSample", &down_sampling_voxel, "pl_feat"_a, "voxel_size"_a);
+
     py::class_<STDescManager> stdesc(m, "_STDescManager", "");
     stdesc
         .def(py::init([](const py::dict &cfg) {
@@ -86,5 +88,5 @@ PYBIND11_MODULE(stdesc_pybind, m) {
                  return STDescManager(config);
              }),
              "config"_a)
-        .def("_ProcessNewScan", &STDescManager::ProcessNewScan, "pcl"_a, "CloudInd"_a);
+        .def("_ProcessNewScan", &STDescManager::ProcessNewScan, "pcl"_a);
 }

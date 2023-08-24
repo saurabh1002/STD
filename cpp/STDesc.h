@@ -4,6 +4,7 @@
 #include <pcl/common/io.h>
 
 #include <Eigen/Core>
+#include <tuple>
 #include <unordered_map>
 
 #include "omp.h"
@@ -186,7 +187,7 @@ public:
     void init_octo_tree();
 };
 
-void down_sampling_voxel(pcl::PointCloud<pcl::PointXYZI> &pl_feat, double voxel_size);
+void down_sampling_voxel(std::vector<Eigen::Vector3d> &pl_feat, double voxel_size);
 
 pcl::PointXYZI vec2point(const Eigen::Vector3d &vec);
 Eigen::Vector3d point2vec(const pcl::PointXYZI &pi);
@@ -259,7 +260,8 @@ public:
 
     /*Three main processing functions*/
 
-    std::pair<int, double> ProcessNewScan(const std::vector<Eigen::Vector3d> &pcl, int CloudInd);
+    std::tuple<int, double, Eigen::Vector3d, Eigen::Matrix3d> ProcessNewScan(
+        const std::vector<Eigen::Vector3d> &pcl);
 
     // generate STDescs from a point cloud
     void GenerateSTDescs(pcl::PointCloud<pcl::PointXYZI>::Ptr &input_cloud,
