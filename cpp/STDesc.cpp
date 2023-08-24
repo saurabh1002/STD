@@ -11,6 +11,7 @@
 #include <iostream>
 #include <mutex>
 #include <unordered_map>
+#include <vector>
 
 #include "omp.h"
 
@@ -117,13 +118,13 @@ void STDescManager::GenerateSTDescs(pcl::PointCloud<pcl::PointXYZI>::Ptr &input_
     return;
 }
 
-void STDescManager::SearchLoop(const std::vector<STDesc> &stds_vec,
-                               std::pair<int, double> &loop_result,
-                               std::pair<Eigen::Vector3d, Eigen::Matrix3d> &loop_transform,
-                               std::vector<std::pair<STDesc, STDesc>> &loop_std_pair) {
+void STDescManager::SearchLoop(const std::vector<STDesc> &stds_vec) {
+    loop_match_ids_.clear();
+    loop_match_scores_.clear();
+    loop_trs_.clear();
+    loop_rots_.clear();
     if (stds_vec.size() == 0) {
         std::cerr << "No STDescs!" << std::endl;
-        loop_result = std::pair<int, double>(-1, 0);
         return;
     }
     // step1, select candidates, default number 50
@@ -133,35 +134,17 @@ void STDescManager::SearchLoop(const std::vector<STDesc> &stds_vec,
 
     auto t2 = std::chrono::high_resolution_clock::now();
     // step2, select best candidates from rough candidates
-    double best_score = 0;
-    unsigned int best_candidate_id = -1;
-    unsigned int triggle_candidate = -1;
-    std::pair<Eigen::Vector3d, Eigen::Matrix3d> best_transform;
-    std::vector<std::pair<STDesc, STDesc>> best_sucess_match_vec;
     for (size_t i = 0; i < candidate_matcher_vec.size(); i++) {
         double verify_score = -1;
         std::pair<Eigen::Vector3d, Eigen::Matrix3d> relative_pose;
         std::vector<std::pair<STDesc, STDesc>> sucess_match_vec;
         candidate_verify(candidate_matcher_vec[i], verify_score, relative_pose, sucess_match_vec);
-        if (verify_score > best_score) {
-            best_score = verify_score;
-            best_candidate_id = candidate_matcher_vec[i].match_id_.second;
-            best_transform = relative_pose;
-            best_sucess_match_vec = sucess_match_vec;
-            triggle_candidate = i;
-        }
+        loop_match_ids_.emplace_back(candidate_matcher_vec[i].match_id_.second);
+        loop_match_scores_.emplace_back(verify_score);
+        loop_rots_.emplace_back(relative_pose.second);
+        loop_trs_.emplace_back(relative_pose.first);
     }
     auto t3 = std::chrono::high_resolution_clock::now();
-
-    if (best_score > config_setting_.icp_threshold_) {
-        loop_result = std::pair<int, double>(best_candidate_id, best_score);
-        loop_transform = best_transform;
-        loop_std_pair = best_sucess_match_vec;
-        return;
-    } else {
-        loop_result = std::pair<int, double>(-1, 0);
-        return;
-    }
 }
 
 void STDescManager::AddSTDescs(const std::vector<STDesc> &stds_vec) {
@@ -1177,24 +1160,24 @@ void STDescManager::PlaneGeomrtricIcp(
     transform.second = rot;
 }
 
-std::tuple<int, double, Eigen::Vector3d, Eigen::Matrix3d> STDescManager::ProcessNewScan(
-    const std::vector<Eigen::Vector3d> &pcl) {
+int STDescManager::ProcessNewScan(const std::vector<Eigen::Vector3d> &pcl) {
     pcl::PointCloud<pcl::PointXYZI>::Ptr current_cloud = EigenToPCL(pcl);
-    std::pair<int, double> search_result(-1, 0);
+
     std::vector<STDesc> stds_vec;
     this->GenerateSTDescs(current_cloud, stds_vec);
-    std::pair<Eigen::Vector3d, Eigen::Matrix3d> loop_transform;
-    loop_transform.first << 0, 0, 0;
-    loop_transform.second = Eigen::Matrix3d::Identity();
-    std::vector<std::pair<STDesc, STDesc>> loop_std_pair;
 
     if (keyCloudInd > config_setting_.skip_near_num_) {
-        this->SearchLoop(stds_vec, search_result, loop_transform, loop_std_pair);
+        this->SearchLoop(stds_vec);
     }
     this->AddSTDescs(stds_vec);
     this->key_cloud_vec_.push_back((*current_cloud).makeShared());
     keyCloudInd++;
-    return {search_result.first, search_result.second, loop_transform.first, loop_transform.second};
+    return loop_match_ids_.size();
+}
+
+std::tuple<int, double, Eigen::Vector3d, Eigen::Matrix3d> STDescManager::GetClosureDataAtIdx(
+    int idx) {
+    return {loop_match_ids_[idx], loop_match_scores_[idx], loop_trs_[idx], loop_rots_[idx]};
 }
 
 void OctoTree::init_plane() {

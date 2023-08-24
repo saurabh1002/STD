@@ -241,6 +241,11 @@ public:
     unsigned int current_frame_id_;
     unsigned int keyCloudInd;
 
+    std::vector<int> loop_match_ids_;
+    std::vector<double> loop_match_scores_;
+    std::vector<Eigen::Vector3d> loop_trs_;
+    std::vector<Eigen::Matrix3d> loop_rots_;
+
     STDescManager(ConfigSetting &config_setting) : config_setting_(config_setting) {
         current_frame_id_ = 0;
         keyCloudInd = 0;
@@ -260,18 +265,15 @@ public:
 
     /*Three main processing functions*/
 
-    std::tuple<int, double, Eigen::Vector3d, Eigen::Matrix3d> ProcessNewScan(
-        const std::vector<Eigen::Vector3d> &pcl);
+    int ProcessNewScan(const std::vector<Eigen::Vector3d> &pcl);
 
+    std::tuple<int, double, Eigen::Vector3d, Eigen::Matrix3d> GetClosureDataAtIdx(int idx);
     // generate STDescs from a point cloud
     void GenerateSTDescs(pcl::PointCloud<pcl::PointXYZI>::Ptr &input_cloud,
                          std::vector<STDesc> &stds_vec);
 
     // search result <candidate_id, plane icp score>. -1 for no loop
-    void SearchLoop(const std::vector<STDesc> &stds_vec,
-                    std::pair<int, double> &loop_result,
-                    std::pair<Eigen::Vector3d, Eigen::Matrix3d> &loop_transform,
-                    std::vector<std::pair<STDesc, STDesc>> &loop_std_pair);
+    void SearchLoop(const std::vector<STDesc> &stds_vec);
 
     // add descriptors to database
     void AddSTDescs(const std::vector<STDesc> &stds_vec);

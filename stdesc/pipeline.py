@@ -99,10 +99,9 @@ class STDescPipeline:
                 self.map_scan_indices.append(np.array(query_scan_indices))
                 self.map_scan_poses.append(np.array(query_scan_poses))
 
-                ref_idx, score, relative_tf = self.std_desc.process_new_scan(
-                    np.concatenate(temp_cloud)
-                )
-                if ref_idx != -1:
+                num_matches = self.std_desc.process_new_scan(np.concatenate(temp_cloud))
+                for match_idx in range(num_matches):
+                    ref_idx, score, relative_tf = self.std_desc.get_closure_data(match_idx)
                     local_map_pairs = LocalMapPair(
                         self.map_scan_indices[ref_idx],
                         self.map_scan_indices[query_idx],

@@ -35,11 +35,15 @@ class STDesc:
 
     def process_new_scan(self, scan: np.ndarray) -> Tuple[int, float]:
         scan = stdesc_pybind._VectorEigen3d(scan)
-        closure_idx, score, t, R = self._pipeline._ProcessNewScan(scan)
+        num_matches = self._pipeline._ProcessNewScan(scan)
+        return num_matches
+
+    def get_closure_data(self, idx: int) -> Tuple[int, float, np.ndarray]:
+        match_idx, match_score, t, R = self._pipeline._GetClosureDataAtIdx(idx)
         T = np.eye(4)
-        T[:3, :3] = R
-        T[:3, -1] = t
-        return closure_idx, score, T
+        T[:3, :3] = np.asarray(R)
+        T[:3, -1] = np.asarray(t)
+        return match_idx, match_score, T
 
 
 def voxel_down_sample(scan: np.ndarray, voxel_size: float) -> np.ndarray:
