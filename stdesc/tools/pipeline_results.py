@@ -70,9 +70,14 @@ class LocalMapPair:
         self._scan_level_closures = self._compute_scan_level_closures()
 
     def _compute_scan_level_closures(self) -> Dict[int, Set[Tuple]]:
+        T_query_world = inv(self._query_scan_poses[0])
+        T_ref_world = inv(self._ref_scan_poses[0])
+
         # bring all poses to a common frame at the query map
-        query_locs = (self._relative_tf @ self._query_scan_poses)[:, :3, -1].squeeze()
-        ref_locs = (self._ref_scan_poses)[:, :3, -1].squeeze()
+        query_locs = (self._relative_tf @ T_query_world @ self._query_scan_poses)[
+            :, :3, -1
+        ].squeeze()
+        ref_locs = (T_ref_world @ self._ref_scan_poses)[:, :3, -1].squeeze()
 
         scan_closure_pairs: Dict[int, List[Tuple]] = {}
         for t in self._closure_distance_thresholds:
