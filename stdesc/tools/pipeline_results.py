@@ -119,7 +119,7 @@ class PipelineResults:
         for dist_key in self._closure_distance_thresholds:
             metrics_dict = {}
             closures_dict = {}
-            for score_threshold in np.arange(0.1, 1.0, 0.1):
+            for score_threshold in np.arange(0.1, 1.0, 0.05):
                 closures = set()
                 for closure_indices, score in zip(self.closure_indices_list, self.scores_list):
                     if score >= score_threshold:

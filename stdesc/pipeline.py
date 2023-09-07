@@ -63,12 +63,14 @@ class STDescPipeline:
 
         self.map_scan_indices = []
         self.map_scan_poses = []
+        self.closures = []
+        self.pcds = []
 
         self.dataset_name = self._dataset.sequence_id
 
         self.gt_closure_indices = self._dataset.gt_closure_indices
 
-        self.closure_distance_thresholds = np.arange(1, 16)
+        self.closure_distance_thresholds = np.arange(1, 10, 0.5)
         self.results = PipelineResults(
             self.gt_closure_indices, self.dataset_name, self.closure_distance_thresholds
         )
@@ -78,10 +80,13 @@ class STDescPipeline:
         if self.gt_closure_indices is not None:
             self._run_evaluation()
         self._log_to_file()
+        self._save_data()
 
         return self.results
 
     def _run_pipeline(self):
+        start_pose_flag = True
+        start_pose = np.eye(4)
         temp_cloud = []
         query_scan_indices = []
         query_scan_poses = []
@@ -91,17 +96,33 @@ class STDescPipeline:
             scan = self._dataset[i]
             self._odometry.register_frame(scan, 0)
             pose = self._odometry.poses[-1]
+            if start_pose_flag:
+                start_pose = np.copy(pose)
+                start_pose_flag = False
             frame_downsample = voxel_down_sample(scan, self.config.ds_size)
-            temp_cloud.append(transform_points(frame_downsample, pose))
+            delta_map_odom = np.linalg.inv(start_pose) @ pose
+            temp_cloud.append(transform_points(frame_downsample, delta_map_odom))
             if ((i + 1) % self.config.sub_frame_num) == 0:
                 query_scan_indices.append(i)
                 query_scan_poses.append(pose)
                 self.map_scan_indices.append(np.array(query_scan_indices))
                 self.map_scan_poses.append(np.array(query_scan_poses))
 
-                num_matches = self.std_desc.process_new_scan(np.concatenate(temp_cloud))
+                local_map = np.concatenate(temp_cloud)
+                num_matches = self.std_desc.process_new_scan(local_map)
+                self.pcds.append(local_map)
                 for match_idx in range(num_matches):
                     ref_idx, score, relative_tf = self.std_desc.get_closure_data(match_idx)
+                    if score > 0.6:
+                        self.closures.append(
+                            np.r_[
+                                ref_idx,
+                                query_idx,
+                                self.map_scan_indices[ref_idx][0],
+                                self.map_scan_indices[query_idx][0],
+                                np.linalg.inv(relative_tf).flatten(),
+                            ]
+                        )
                     local_map_pairs = LocalMapPair(
                         self.map_scan_indices[ref_idx],
                         self.map_scan_indices[query_idx],
@@ -114,6 +135,7 @@ class STDescPipeline:
                 temp_cloud.clear()
                 query_scan_indices.clear()
                 query_scan_poses.clear()
+                start_pose_flag = True
                 query_idx += 1
             else:
                 query_scan_indices.append(i)
@@ -127,6 +149,23 @@ class STDescPipeline:
         if self.gt_closure_indices is not None:
             self.results.log_to_file_pr(os.path.join(self.results_dir, "metrics.txt"))
         self.results.log_to_file_closures(self.results_dir)
+
+    def _save_data(self):
+        import open3d as o3d
+
+        np.save(
+            os.path.join(self.results_dir, "poses.npy"),
+            np.asarray(self._odometry.poses),
+        )
+        np.savetxt(os.path.join(self.results_dir, "closures.txt"), np.asarray(self.closures))
+
+        local_map_dir = os.path.join(self.results_dir, "ply")
+        os.makedirs(local_map_dir, exist_ok=True)
+        for i, local_map in enumerate(self.pcds):
+            o3d.io.write_point_cloud(
+                os.path.join(local_map_dir, f"{i:06d}.ply"),
+                o3d.geometry.PointCloud(o3d.utility.Vector3dVector(local_map)),
+            )
 
     def _create_results_dir(self) -> Path:
         def get_timestamp() -> str:
