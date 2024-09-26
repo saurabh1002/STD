@@ -20,8 +20,6 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-import glob
-import os
 from pathlib import Path
 from typing import Optional
 
@@ -74,12 +72,6 @@ def stdesc_pipeline(
         callback=name_callback,
         help="[Optional] Use a specific dataloader from those supported",
     ),
-    gt_overlap_threshold: float = typer.Option(
-        0.5,
-        show_default=True,
-        case_sensitive=False,
-        help="[Optional] Overlap threshold in range [0, 1] between two groundtruth scans",
-    ),
     config: Optional[Path] = typer.Option(
         None,
         "--config",
@@ -88,7 +80,7 @@ def stdesc_pipeline(
         help="[Optional] Path to the configuration file",
     ),
     # Aditional Options ---------------------------------------------------------------------------
-    sequence: Optional[int] = typer.Option(
+    sequence: Optional[str] = typer.Option(
         None,
         "--sequence",
         "-s",
@@ -105,7 +97,6 @@ def stdesc_pipeline(
         dataset=dataset_factory(
             dataloader=dataloader,
             data_dir=data,
-            overlap_threshold=gt_overlap_threshold,
             # Additional options
             sequence=sequence,
         ),
