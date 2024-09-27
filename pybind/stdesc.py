@@ -23,7 +23,7 @@
 from typing import Tuple
 
 import numpy as np
-from pydantic import BaseSettings
+from pydantic_settings import BaseSettings
 
 from . import stdesc_pybind
 
@@ -31,7 +31,7 @@ from . import stdesc_pybind
 class STDesc:
     def __init__(self, config: BaseSettings):
         self._config = config
-        self._pipeline = stdesc_pybind._STDescManager(self._config.dict())
+        self._pipeline = stdesc_pybind._STDescManager(self._config.model_dump())
 
     def process_new_scan(self, scan: np.ndarray) -> Tuple[int, float]:
         scan = stdesc_pybind._VectorEigen3d(scan)

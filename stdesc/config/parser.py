@@ -25,12 +25,12 @@ from __future__ import annotations
 import importlib
 import sys
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Optional
 
-from pydantic import BaseSettings, PrivateAttr
+from pydantic import BaseModel
 
 
-class STDescConfig(BaseSettings):
+class STDescConfig(BaseModel):
     ds_size: float = 0.25
     maximum_corner_num: int = 100
     plane_merge_normal_thre: float = 0.2
@@ -55,46 +55,32 @@ class STDescConfig(BaseSettings):
     normal_threshold: float = 0.2
     dis_threshold: float = 0.5
 
-    _config_file: Optional[Path] = PrivateAttr()
-
-    def __init__(self, config_file: Optional[Path] = None, *args, **kwargs):
-        self._config_file = config_file
-        super().__init__(*args, **kwargs)
-
-    def _yaml_source(self) -> Dict[str, Any]:
-        data = None
-        if self._config_file is not None:
-            try:
-                yaml = importlib.import_module("yaml")
-            except ModuleNotFoundError:
-                print(
-                    "Custom configuration file specified but PyYAML is not installed on your system,"
-                    " run `pip install pyyaml`"
-                )
-                sys.exit(1)
-            with open(self._config_file) as cfg_file:
-                data = yaml.safe_load(cfg_file)
-        return data or {}
-
-    class Config:
-        @classmethod
-        def customise_sources(cls, init_settings, env_settings, file_secret_settings):
-            return init_settings, STDescConfig._yaml_source
-
 
 def load_config(config_file: Optional[Path]) -> STDescConfig:
     """Load configuration from an Optional yaml file. Additionally, deskew and max_range can be
     also specified from the CLI interface"""
 
-    config = STDescConfig(config_file=config_file)
-
-    return config
+    config = None
+    if config_file is not None:
+        try:
+            yaml = importlib.import_module("yaml")
+        except ModuleNotFoundError:
+            print(
+                "[ERROR] Custom configuration file specified but PyYAML is not installed on your system,"
+                " run `pip install pyyaml`"
+            )
+            sys.exit(1)
+        with open(config_file) as cfg_file:
+            config = yaml.safe_load(cfg_file)
+        return STDescConfig(**config)
+    else:
+        return STDescConfig()
 
 
 def write_config(config: STDescConfig, filename: str):
     with open(filename, "w") as outfile:
         try:
             yaml = importlib.import_module("yaml")
-            yaml.dump(config.dict(), outfile, default_flow_style=False)
+            yaml.dump(config.model_dump(), outfile, default_flow_style=False)
         except ModuleNotFoundError:
-            outfile.write(str(config.dict()))
+            outfile.write(str(config.model_dump()))

@@ -95,7 +95,7 @@ class STDescPipeline:
         for i in get_progress_bar(self._first, self._last):
             scan = self._dataset[i]
             self._odometry.register_frame(scan, 0)
-            pose = self._odometry.poses[-1]
+            pose = self._odometry.last_pose
             if start_pose_flag:
                 start_pose = np.copy(pose)
                 start_pose_flag = False
