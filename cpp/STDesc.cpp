@@ -1170,7 +1170,6 @@ int STDescManager::ProcessNewScan(const std::vector<Eigen::Vector3d> &pcl) {
         this->SearchLoop(stds_vec);
     }
     this->AddSTDescs(stds_vec);
-    this->key_cloud_vec_.push_back((*current_cloud).makeShared());
     keyCloudInd++;
     return loop_match_ids_.size();
 }

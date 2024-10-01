@@ -64,7 +64,6 @@ class STDescPipeline:
         self.map_scan_indices = []
         self.map_scan_poses = []
         self.closures = []
-        self.pcds = []
 
         self.dataset_name = self._dataset.sequence_id
 
@@ -110,7 +109,6 @@ class STDescPipeline:
 
                 local_map = np.concatenate(temp_cloud)
                 num_matches = self.std_desc.process_new_scan(local_map)
-                self.pcds.append(local_map)
                 for match_idx in range(num_matches):
                     ref_idx, score, relative_tf = self.std_desc.get_closure_data(match_idx)
                     if score > 0.6:
@@ -151,21 +149,7 @@ class STDescPipeline:
         self.results.log_to_file_closures(self.results_dir)
 
     def _save_data(self):
-        import open3d as o3d
-
-        np.save(
-            os.path.join(self.results_dir, "poses.npy"),
-            np.asarray(self._odometry.poses),
-        )
         np.savetxt(os.path.join(self.results_dir, "closures.txt"), np.asarray(self.closures))
-
-        local_map_dir = os.path.join(self.results_dir, "ply")
-        os.makedirs(local_map_dir, exist_ok=True)
-        for i, local_map in enumerate(self.pcds):
-            o3d.io.write_point_cloud(
-                os.path.join(local_map_dir, f"{i:06d}.ply"),
-                o3d.geometry.PointCloud(o3d.utility.Vector3dVector(local_map)),
-            )
 
     def _create_results_dir(self) -> Path:
         def get_timestamp() -> str:
