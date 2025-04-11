@@ -127,7 +127,7 @@ class PipelineResults:
         self,
     ):
         for i, score_threshold in enumerate(np.arange(0.1, 1.0, 0.05)):
-            for j, distance_threshold in enumerate(range(1, self._closure_distance_threshold)):
+            for j, distance_threshold in enumerate(range(5, self._closure_distance_threshold, 5)):
                 closures = set()
                 for closure_indices, closure_distances, score in zip(
                     self.closure_indices_list, self.closure_distances_list, self.scores_list
@@ -154,7 +154,7 @@ class PipelineResults:
         table.caption = f"Loop Closure Evaluation Metrics\n"
         table.add_column("Score \ Distance (m)", justify="center", style="cyan")
         score_thresholds = np.arange(0.1, 1.0, 0.05)
-        for distance_threshold in range(1, self._closure_distance_threshold):
+        for distance_threshold in range(5, self._closure_distance_threshold, 5):
             table.add_column(f"{distance_threshold}", justify="center", style="magenta")
         for i, row in enumerate(self.metrics):
             metrics = [f"{val[-3]:.4f}\n{val[-2]:.4f}\n{val[-1]:.4f}" for val in row]
