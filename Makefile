@@ -1,14 +1,15 @@
 .PHONY: cpp
 
-editable:
-	pip install --verbose --prefix=$(shell python3 -m site --user-base) --editable .
-
 install:
-	@pip install --verbose .
+	@pip install --verbose ./python/
+
+editable:
+	@pip install scikit-build-core pyproject_metadata pathspec pybind11 ninja cmake
+	@pip install --no-build-isolation -ve ./python/
 
 uninstall:
-	@pip -v uninstall stdesc
+	@pip -v uninstall stddesc
 
 cpp:
-	@cmake -Bbuild .
+	@cmake -Bbuild cpp/
 	@cmake --build build -j$(nproc --all)

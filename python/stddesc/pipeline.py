@@ -30,10 +30,10 @@ from kiss_icp.config import KISSConfig
 from kiss_icp.kiss_icp import KissICP
 from kiss_icp.voxelization import voxel_down_sample
 
-from pybind.stdesc import STDesc
-from stdesc.config import load_config
-from stdesc.tools.pipeline_results import PipelineResults
-from stdesc.tools.progress_bar import get_progress_bar
+from stddesc.stddesc import STDesc
+from stddesc.config import load_config
+from stddesc.tools.pipeline_results import PipelineResults
+from stddesc.tools.progress_bar import get_progress_bar
 
 
 def transform_points(pcd, T):
@@ -92,13 +92,18 @@ class STDescPipeline:
         query_idx = 0
 
         for i in get_progress_bar(self._first, self._last):
-            scan = self._dataset[i]
-            self._odometry.register_frame(scan, 0)
+            try:
+                frame, timestamps = self._dataset[i]
+            except ValueError:
+                frame = self._dataset[i]
+                timestamps = np.zeros(len(frame))
+
+            frame, _ = self._odometry.register_frame(frame, timestamps)
             pose = self._odometry.last_pose
             if start_pose_flag:
                 start_pose = np.copy(pose)
                 start_pose_flag = False
-            frame_downsample = voxel_down_sample(scan, self.config.ds_size)
+            frame_downsample = voxel_down_sample(frame, self.config.ds_size)
             delta_map_odom = np.linalg.inv(start_pose) @ pose
             temp_cloud.append(transform_points(frame_downsample, delta_map_odom))
             if ((i + 1) % self.config.sub_frame_num) == 0:

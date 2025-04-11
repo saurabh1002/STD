@@ -1,0 +1,6 @@
+recursive-include stddesc *.py
+recursive-include stddesc *.cpp
+recursive-include stddesc *.hpp
+recursive-include stddesc *.h
+global-include CMakeLists.txt
+global-include *.cmake

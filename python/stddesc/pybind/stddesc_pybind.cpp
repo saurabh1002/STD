@@ -29,7 +29,7 @@
 #include <Eigen/Core>
 #include <vector>
 
-#include "STDesc.h"
+#include "stddesc/STDdesc.h"
 #include "stl_vector_eigen.h"
 
 PYBIND11_MAKE_OPAQUE(std::vector<Eigen::Vector3d>);
@@ -74,7 +74,7 @@ ConfigSetting GetConfigFromYAML(const py::dict &yaml_cfg) {
     return config;
 }
 
-PYBIND11_MODULE(stdesc_pybind, m) {
+PYBIND11_MODULE(stddesc_pybind, m) {
     auto vector3dvector = pybind_eigen_vector_of_vector<Eigen::Vector3d>(
         m, "_VectorEigen3d", "std::vector<Eigen::Vector3d>",
         py::py_array_to_vectors_double<Eigen::Vector3d>);

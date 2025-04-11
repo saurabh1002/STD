@@ -25,16 +25,16 @@ from typing import Tuple
 import numpy as np
 from pydantic_settings import BaseSettings
 
-from . import stdesc_pybind
+from stddesc.pybind import stddesc_pybind
 
 
 class STDesc:
     def __init__(self, config: BaseSettings):
         self._config = config
-        self._pipeline = stdesc_pybind._STDescManager(self._config.model_dump())
+        self._pipeline = stddesc_pybind._STDescManager(self._config.model_dump())
 
     def process_new_scan(self, scan: np.ndarray) -> Tuple[int, float]:
-        scan = stdesc_pybind._VectorEigen3d(scan)
+        scan = stddesc_pybind._VectorEigen3d(scan)
         num_matches = self._pipeline._ProcessNewScan(scan)
         return num_matches
 
@@ -47,6 +47,6 @@ class STDesc:
 
 
 def voxel_down_sample(scan: np.ndarray, voxel_size: float) -> np.ndarray:
-    scan = stdesc_pybind._VectorEigen3d(scan)
-    stdesc_pybind._VoxelDownSample(scan, voxel_size)
+    scan = stddesc_pybind._VectorEigen3d(scan)
+    stddesc_pybind._VoxelDownSample(scan, voxel_size)
     return np.asarray(scan)

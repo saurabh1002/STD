@@ -90,8 +90,8 @@ def stdesc_pipeline(
     ),
 ):
     # Lazy-loading for faster CLI
-    from stdesc.datasets import dataset_factory
-    from stdesc.pipeline import STDescPipeline
+    from stddesc.datasets import dataset_factory
+    from stddesc.pipeline import STDescPipeline
 
     STDescPipeline(
         dataset=dataset_factory(

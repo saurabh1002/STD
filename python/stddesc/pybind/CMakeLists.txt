@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2023 Saurabh Gupta, Tiziano Guadagnino, Cyrill Stachniss.
+# Copyright (c) 20223 Saurabh Gupta, Tiziano Guadagnino, Cyrill Stachniss.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -19,19 +19,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from setuptools import find_packages
-from skbuild import setup
 
-setup(
-    packages=find_packages(),
-    cmake_install_dir="pybind/",
-    cmake_install_target="install_python_bindings",
-    entry_points={"console_scripts": ["stdesc_pipeline=stdesc.tools.cmd:run"]},
-    install_requires=[
-        "numpy",
-        "typer[all]>=0.6.0",
-        "open3d>=0.13",
-        "tqdm",
-        "plyfile",
-    ],
-)
+pybind11_add_module(stddesc_pybind MODULE stddesc_pybind.cpp)
+target_link_libraries(stddesc_pybind PUBLIC stddesc)
+install(TARGETS stddesc_pybind DESTINATION .)

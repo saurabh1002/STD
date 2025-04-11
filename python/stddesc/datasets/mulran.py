@@ -1,7 +1,7 @@
 # MIT License
 #
-# Copyright (c) 2022 Ignacio Vizzo, Tiziano Guadagnino, Benedikt Mersch, Cyrill
-# Stachniss.
+# Copyright (c) 2024 Saurabh Gupta, Ignacio Vizzo, Tiziano Guadagnino, Benedikt Mersch,
+# Cyrill Stachniss.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -29,15 +29,16 @@ import numpy as np
 
 class MulranDataset:
     def __init__(self, data_dir: Path, *_, **__):
-        self.data_dir = os.path.realpath(data_dir)
         self.sequence_id = os.path.basename(data_dir)
-        self.velodyne_dir = os.path.join(self.data_dir, "Ouster/")
+        self.sequence_dir = os.path.realpath(data_dir)
+        self.velodyne_dir = os.path.join(self.sequence_dir, "Ouster/")
 
         self.scan_files = sorted(glob.glob(self.velodyne_dir + "*.bin"))
+        self.scan_timestamps = [int(os.path.basename(t).split(".")[0]) for t in self.scan_files]
 
         try:
             self.gt_closure_indices = np.loadtxt(
-                os.path.join(self.data_dir, "loop_closure", "gt_closures.txt")
+                os.path.join(self.sequence_dir, "loop_closure", "gt_closures.txt")
             )
         except FileNotFoundError:
             self.gt_closure_indices = None
@@ -50,4 +51,14 @@ class MulranDataset:
 
     def read_point_cloud(self, file_path: str):
         points = np.fromfile(file_path, dtype=np.float32).reshape((-1, 4))[:, :3]
-        return points.astype(np.float64)
+        timestamps = self.get_timestamps()
+        if points.shape[0] != timestamps.shape[0]:
+            # MuRan has some broken point clouds, just fallback to no timestamps
+            return points.astype(np.float64), np.ones(points.shape[0])
+        return points.astype(np.float64), timestamps
+    
+    @staticmethod
+    def get_timestamps():
+        H = 64
+        W = 1024
+        return (np.floor(np.arange(H * W) / H) / W).reshape(-1, 1)
