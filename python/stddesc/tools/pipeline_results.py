@@ -54,46 +54,13 @@ class Metrics:
         return np.r_[self.tp, self.fp, self.fn, self.precision, self.recall, self.F1]
 
 
-def compute_closure_indices(
-    ref_indices: np.ndarray,
-    query_indices: np.ndarray,
-    ref_scan_poses: np.ndarray,
-    query_scan_poses: np.ndarray,
-    relative_tf: np.ndarray,
-    closure_distance_threshold: float,
-):
-    T_query_world = inv(query_scan_poses[0])
-    T_ref_world = inv(ref_scan_poses[0])
-
-    # bring all poses to a common frame at the query map
-    query_locs = (relative_tf @ T_query_world @ query_scan_poses)[:, :3, -1].squeeze()
-    ref_locs = (T_ref_world @ ref_scan_poses)[:, :3, -1].squeeze()
-
-    closure_indices = []
-    closure_distances = []
-    query_id_start = query_indices[0]
-    ref_id_start = ref_indices[0]
-    qq, rr = np.meshgrid(query_indices, ref_indices)
-    distances = norm(query_locs[qq - query_id_start] - ref_locs[rr - ref_id_start], axis=2)
-    ids = np.where(distances < closure_distance_threshold)
-    for r_id, q_id, distance in zip(ids[0] + ref_id_start, ids[1] + query_id_start, distances[ids]):
-        closure_indices.append((r_id, q_id))
-        closure_distances.append(distance)
-    return np.asarray(closure_indices, int), np.asarray(closure_distances)
-
-
 class PipelineResults:
-    def __init__(
-        self, gt_closures: np.ndarray, dataset_name: str, closure_distance_threshold: float
-    ):
+    def __init__(self, gt_closures: np.ndarray, dataset_name: str):
         self._dataset_name = dataset_name
-        self._closure_distance_threshold = closure_distance_threshold
 
-        self.closure_indices_list: List[List[Tuple[int]]] = []
-        self.closure_distances_list: List[List[float]] = []
-        self.scores_list: List = []
-
-        self.metrics = np.zeros((18, closure_distance_threshold - 1, 6))
+        self.closure_list: List[Tuple[int]] = []
+        self.scores_list: List[float] = []
+        self.metrics = []
 
         gt_closures = gt_closures if gt_closures.shape[1] == 2 else gt_closures.T
         self.gt_closures: Set[Tuple[int]] = set(map(lambda x: tuple(sorted(x)), gt_closures))
@@ -101,64 +68,42 @@ class PipelineResults:
     def print(self):
         self.log_to_console()
 
-    def append(
-        self,
-        ref_indices: np.ndarray,
-        query_indices: np.ndarray,
-        ref_scan_poses: np.ndarray,
-        query_scan_poses: np.ndarray,
-        relative_tf: np.ndarray,
-        closure_distance_threshold: float,
-        score: float,
-    ):
-        closure_indices, closure_distances = compute_closure_indices(
-            ref_indices,
-            query_indices,
-            ref_scan_poses,
-            query_scan_poses,
-            relative_tf,
-            closure_distance_threshold,
-        )
-        self.closure_indices_list.append(closure_indices)
-        self.closure_distances_list.append(closure_distances)
+    def append(self, source_id: int, target_id: int, score: float) -> None:
         self.scores_list.append(score)
+        self.closure_list.append((source_id, target_id))
 
-    def compute_closures_and_metrics(
+    def compute_metrics(
         self,
     ):
-        for i, score_threshold in enumerate(np.arange(0.1, 1.0, 0.05)):
-            for j, distance_threshold in enumerate(range(1, self._closure_distance_threshold)):
-                closures = set()
-                for closure_indices, closure_distances, score in zip(
-                    self.closure_indices_list, self.closure_distances_list, self.scores_list
-                ):
-                    if score >= score_threshold:
-                        closures = closures.union(
-                            set(
-                                map(
-                                    lambda x: tuple(x),
-                                    closure_indices[
-                                        np.where(closure_distances < distance_threshold)
-                                    ],
-                                )
-                            )
-                        )
-
-                tp = len(self.gt_closures.intersection(closures))
-                fp = len(closures) - tp
-                fn = len(self.gt_closures) - tp
-                self.metrics[i, j] = Metrics(tp, fp, fn)()
+        for i, score_threshold in enumerate(np.arange(0.0, 1.0, 0.1)):
+            closures = set()
+            for closure_indices, score in zip(self.closure_list, self.scores_list):
+                if score >= score_threshold:
+                    closures.add(closure_indices)
+            tp = len(self.gt_closures.intersection(closures))
+            fp = len(closures) - tp
+            fn = len(self.gt_closures) - tp
+            self.metrics.append(Metrics(tp, fp, fn))
 
     def _rich_table_pr(self, table_format: box.Box = box.HORIZONTALS) -> Table:
-        table = Table(box=table_format)
-        table.caption = f"Loop Closure Evaluation Metrics\n"
-        table.add_column("Score \ Distance (m)", justify="center", style="cyan")
-        score_thresholds = np.arange(0.1, 1.0, 0.05)
-        for distance_threshold in range(1, self._closure_distance_threshold):
-            table.add_column(f"{distance_threshold}", justify="center", style="magenta")
-        for i, row in enumerate(self.metrics):
-            metrics = [f"{val[-3]:.4f}\n{val[-2]:.4f}\n{val[-1]:.4f}" for val in row]
-            table.add_row(f"{score_thresholds[i]:.2f}", *metrics)
+        table = Table(box=table_format, title=self._dataset_name)
+        table.add_column("STD Threshold", justify="center", style="cyan")
+        table.add_column("True Positives", justify="center", style="magenta")
+        table.add_column("False Positives", justify="center", style="magenta")
+        table.add_column("False Negatives", justify="center", style="magenta")
+        table.add_column("Precision", justify="left", style="green")
+        table.add_column("Recall", justify="left", style="green")
+        table.add_column("F1 score", justify="left", style="green")
+        for threshold, metric in zip(np.arange(0.0, 1.0, 0.1), self.metrics):
+            table.add_row(
+                f"{threshold:.4f}",
+                f"{metric.tp}",
+                f"{metric.fp}",
+                f"{metric.fn}",
+                f"{metric.precision:.4f}",
+                f"{metric.recall:.4f}",
+                f"{metric.F1:.4f}",
+            )
         return table
 
     def log_to_console(self):
