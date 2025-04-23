@@ -98,7 +98,7 @@ class STDescPipeline:
                 frame, timestamps = self._dataset[i]
             except ValueError:
                 frame = self._dataset[i]
-                timestamps = np.zeros(len(frame))
+                timestamps = np.array([])
 
             frame, _ = self._odometry.register_frame(frame, timestamps)
             pose = self._odometry.last_pose
