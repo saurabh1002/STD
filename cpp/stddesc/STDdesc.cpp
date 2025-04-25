@@ -106,10 +106,6 @@ void STDescManager::GenerateSTDescs(const pcl::PointCloud<pcl::PointXYZI>::Ptr &
 }
 
 void STDescManager::SearchLoop(const std::vector<STDesc> &stds_vec) {
-    loop_match_ids_.clear();
-    loop_match_scores_.clear();
-    loop_trs_.clear();
-    loop_rots_.clear();
     if (stds_vec.size() == 0) {
         std::cerr << "No STDescs!" << std::endl;
         return;
@@ -118,16 +114,20 @@ void STDescManager::SearchLoop(const std::vector<STDesc> &stds_vec) {
     std::vector<STDMatchList> candidate_matcher_vec;
     candidate_selector(stds_vec, candidate_matcher_vec);
 
+    loop_match_ids_.resize(candidate_matcher_vec.size());
+    loop_match_scores_.resize(candidate_matcher_vec.size());
+    loop_trs_.resize(candidate_matcher_vec.size());
+    loop_rots_.resize(candidate_matcher_vec.size());
     // step2, select best candidates from rough candidates
     for (size_t i = 0; i < candidate_matcher_vec.size(); i++) {
         double verify_score = -1;
         std::pair<Eigen::Vector3d, Eigen::Matrix3d> relative_pose;
         std::vector<std::pair<STDesc, STDesc>> success_match_vec;
         candidate_verify(candidate_matcher_vec[i], verify_score, relative_pose, success_match_vec);
-        loop_match_ids_.emplace_back(candidate_matcher_vec[i].match_id_.second);
-        loop_match_scores_.emplace_back(verify_score);
-        loop_rots_.emplace_back(relative_pose.second);
-        loop_trs_.emplace_back(relative_pose.first);
+        loop_match_ids_[i] = candidate_matcher_vec[i].match_id_.second;
+        loop_match_scores_[i] = verify_score;
+        loop_rots_[i] = relative_pose.second;
+        loop_trs_[i] = relative_pose.first;
     }
 }
 
