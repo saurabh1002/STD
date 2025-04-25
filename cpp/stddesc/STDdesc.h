@@ -269,7 +269,7 @@ public:
 
     std::tuple<int, double, Eigen::Vector3d, Eigen::Matrix3d> GetClosureDataAtIdx(int idx);
     // generate STDescs from a point cloud
-    void GenerateSTDescs(pcl::PointCloud<pcl::PointXYZI>::Ptr &input_cloud,
+    void GenerateSTDescs(const pcl::PointCloud<pcl::PointXYZI>::Ptr &input_cloud,
                          std::vector<STDesc> &stds_vec);
 
     // search result <candidate_id, plane icp score>. -1 for no loop

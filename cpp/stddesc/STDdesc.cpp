@@ -54,16 +54,31 @@ pcl::PointCloud<pcl::PointXYZI>::Ptr EigenToPCL(const std::vector<Eigen::Vector3
     return pcl;
 }
 
-pcl::PointXYZI vec2point(const Eigen::Vector3d &vec) {
+inline pcl::PointXYZI vec2point(const Eigen::Vector3d &vec) {
     pcl::PointXYZI pi;
     pi.x = vec[0];
     pi.y = vec[1];
     pi.z = vec[2];
     return pi;
 }
-Eigen::Vector3d point2vec(const pcl::PointXYZI &pi) { return Eigen::Vector3d(pi.x, pi.y, pi.z); }
 
-void STDescManager::GenerateSTDescs(pcl::PointCloud<pcl::PointXYZI>::Ptr &input_cloud,
+inline Eigen::Vector3d point2vec(const pcl::PointXYZ &pi) {
+    return Eigen::Vector3d(pi.x, pi.y, pi.z);
+}
+
+inline Eigen::Vector3d point2vec(const pcl::PointXYZI &pi) {
+    return Eigen::Vector3d(pi.x, pi.y, pi.z);
+}
+
+inline Eigen::Vector3d point2vec(const pcl::PointXYZINormal &pi) {
+    return Eigen::Vector3d(pi.x, pi.y, pi.z);
+}
+
+inline Eigen::Vector3d normal2vec(const pcl::PointXYZINormal &pi) {
+    return Eigen::Vector3d(pi.normal_x, pi.normal_y, pi.normal_z);
+}
+
+void STDescManager::GenerateSTDescs(const pcl::PointCloud<pcl::PointXYZI>::Ptr &input_cloud,
                                     std::vector<STDesc> &stds_vec) {
     // step1, voxelization and plane dection
     std::unordered_map<VOXEL_LOC, OctoTree *> voxel_map;
@@ -344,7 +359,7 @@ void STDescManager::corner_extractor(std::unordered_map<VOXEL_LOC, OctoTree *> &
                       return (a.first > b.first);
                   });
         for (size_t i = 0; i < config_setting_.maximum_corner_num_; i++) {
-            corner_points->points.push_back(prepare_corner_points->points[attach_vec[i].second]);
+            corner_points->points.emplace_back(prepare_corner_points->points[attach_vec[i].second]);
         }
     }
 }
@@ -520,7 +535,7 @@ void STDescManager::extract_corner(const Eigen::Vector3d &proj_center,
     std::vector<Eigen::Vector2i> direction_list = {{0, 1}, {1, 0}, {1, 1}, {1, -1}};
     corner_points->reserve(max_gradient_vec.size());
     for (size_t i = 0; i < max_gradient_vec.size(); i++) {
-        for (const auto& direction : direction_list) {
+        for (const auto &direction : direction_list) {
             Eigen::Vector2i p(max_gradient_x_index_vec[i], max_gradient_y_index_vec[i]);
             Eigen::Vector2i p1 = p + direction;
             Eigen::Vector2i p2 = p - direction;
@@ -569,7 +584,7 @@ void STDescManager::non_maxi_suppression(
         pcl::PointXYZINormal searchPoint = prepare_key_cloud->points[i];
         if (kd_tree.radiusSearch(searchPoint, radius, pointIdxRadiusSearch,
                                  pointRadiusSquaredDistance) > 0) {
-            for (const auto& search_index : pointIdxRadiusSearch) {
+            for (const auto &search_index : pointIdxRadiusSearch) {
                 if (search_index == i) {
                     continue;
                 }
@@ -612,18 +627,10 @@ void STDescManager::build_stdesc(const pcl::PointCloud<pcl::PointXYZINormal>::Pt
                     pcl::PointXYZINormal p1 = searchPoint;
                     pcl::PointXYZINormal p2 = corner_points->points[pointIdxNKNSearch[m]];
                     pcl::PointXYZINormal p3 = corner_points->points[pointIdxNKNSearch[n]];
-                    Eigen::Vector3d normal_inc1(p1.normal_x - p2.normal_x,
-                                                p1.normal_y - p2.normal_y,
-                                                p1.normal_z - p2.normal_z);
-                    Eigen::Vector3d normal_inc2(p3.normal_x - p2.normal_x,
-                                                p3.normal_y - p2.normal_y,
-                                                p3.normal_z - p2.normal_z);
-                    Eigen::Vector3d normal_add1(p1.normal_x + p2.normal_x,
-                                                p1.normal_y + p2.normal_y,
-                                                p1.normal_z + p2.normal_z);
-                    Eigen::Vector3d normal_add2(p3.normal_x + p2.normal_x,
-                                                p3.normal_y + p2.normal_y,
-                                                p3.normal_z + p2.normal_z);
+                    Eigen::Vector3d normal_inc1 = normal2vec(p1) - normal2vec(p2);
+                    Eigen::Vector3d normal_inc2 = normal2vec(p3) - normal2vec(p2);
+                    Eigen::Vector3d normal_add1 = normal2vec(p1) + normal2vec(p2);
+                    Eigen::Vector3d normal_add2 = normal2vec(p3) + normal2vec(p2);
                     double a =
                         sqrt(pow(p1.x - p2.x, 2) + pow(p1.y - p2.y, 2) + pow(p1.z - p2.z, 2));
                     double b =
@@ -677,42 +684,44 @@ void STDescManager::build_stdesc(const pcl::PointCloud<pcl::PointXYZINormal>::Pt
                     if (iter == feat_map.end()) {
                         Eigen::Vector3d vertex_attached;
                         if (l1[0] == l2[0]) {
-                            A << p1.x, p1.y, p1.z;
-                            normal_1 << p1.normal_x, p1.normal_y, p1.normal_z;
+                            A = point2vec(p1);
+                            normal_1 = normal2vec(p1);
                             vertex_attached[0] = p1.intensity;
                         } else if (l1[1] == l2[1]) {
-                            A << p2.x, p2.y, p2.z;
-                            normal_1 << p2.normal_x, p2.normal_y, p2.normal_z;
+                            A = point2vec(p2);
+                            normal_1 = normal2vec(p2);
+                            ;
                             vertex_attached[0] = p2.intensity;
                         } else {
-                            A << p3.x, p3.y, p3.z;
-                            normal_1 << p3.normal_x, p3.normal_y, p3.normal_z;
+                            A = point2vec(p3);
+                            normal_1 = normal2vec(p3);
+                            ;
                             vertex_attached[0] = p3.intensity;
                         }
                         if (l1[0] == l3[0]) {
-                            B << p1.x, p1.y, p1.z;
-                            normal_2 << p1.normal_x, p1.normal_y, p1.normal_z;
+                            B = point2vec(p1);
+                            normal_2 = normal2vec(p1);
                             vertex_attached[1] = p1.intensity;
                         } else if (l1[1] == l3[1]) {
-                            B << p2.x, p2.y, p2.z;
-                            normal_2 << p2.normal_x, p2.normal_y, p2.normal_z;
+                            B = point2vec(p2);
+                            normal_2 = normal2vec(p2);
                             vertex_attached[1] = p2.intensity;
                         } else {
-                            B << p3.x, p3.y, p3.z;
-                            normal_2 << p3.normal_x, p3.normal_y, p3.normal_z;
+                            B = point2vec(p3);
+                            normal_2 = normal2vec(p3);
                             vertex_attached[1] = p3.intensity;
                         }
                         if (l2[0] == l3[0]) {
-                            C << p1.x, p1.y, p1.z;
-                            normal_3 << p1.normal_x, p1.normal_y, p1.normal_z;
+                            C = point2vec(p1);
+                            normal_3 = normal2vec(p1);
                             vertex_attached[2] = p1.intensity;
                         } else if (l2[1] == l3[1]) {
-                            C << p2.x, p2.y, p2.z;
-                            normal_3 << p2.normal_x, p2.normal_y, p2.normal_z;
+                            C = point2vec(p2);
+                            normal_3 = normal2vec(p2);
                             vertex_attached[2] = p2.intensity;
                         } else {
-                            C << p3.x, p3.y, p3.z;
-                            normal_3 << p3.normal_x, p3.normal_y, p3.normal_z;
+                            C = point2vec(p3);
+                            normal_3 = normal2vec(p3);
                             vertex_attached[2] = p3.intensity;
                         }
                         STDesc single_descriptor;
@@ -984,9 +993,8 @@ double STDescManager::plane_geometric_verify(
                                     pointNKNSquaredDistance) > 0) {
             for (size_t j = 0; j < K; j++) {
                 pcl::PointXYZINormal nearstPoint = target_cloud->points[pointIdxNKNSearch[j]];
-                Eigen::Vector3d tpi(nearstPoint.x, nearstPoint.y, nearstPoint.z);
-                Eigen::Vector3d tni(nearstPoint.normal_x, nearstPoint.normal_y,
-                                    nearstPoint.normal_z);
+                Eigen::Vector3d tpi = point2vec(nearstPoint);
+                Eigen::Vector3d tni = normal2vec(nearstPoint);
                 Eigen::Vector3d normal_inc = ni - tni;
                 Eigen::Vector3d normal_add = ni + tni;
                 double point_to_plane = fabs(tni.transpose() * (pi - tpi));
@@ -1033,7 +1041,7 @@ void STDescManager::PlaneGeomrtricIcp(
     int useful_match = 0;
     for (size_t i = 0; i < source_cloud->size(); i++) {
         pcl::PointXYZINormal searchPoint = source_cloud->points[i];
-        Eigen::Vector3d pi(searchPoint.x, searchPoint.y, searchPoint.z);
+        Eigen::Vector3d pi = point2vec(searchPoint);
         pi = rot * pi + t;
         pcl::PointXYZ use_search_point;
         use_search_point.x = pi[0];
@@ -1044,8 +1052,8 @@ void STDescManager::PlaneGeomrtricIcp(
         if (kd_tree->nearestKSearch(use_search_point, 1, pointIdxNKNSearch,
                                     pointNKNSquaredDistance) > 0) {
             pcl::PointXYZINormal nearstPoint = target_cloud->points[pointIdxNKNSearch[0]];
-            Eigen::Vector3d tpi(nearstPoint.x, nearstPoint.y, nearstPoint.z);
-            Eigen::Vector3d tni(nearstPoint.normal_x, nearstPoint.normal_y, nearstPoint.normal_z);
+            Eigen::Vector3d tpi = point2vec(nearstPoint);
+            Eigen::Vector3d tni = normal2vec(nearstPoint);
             Eigen::Vector3d normal_inc = ni - tni;
             Eigen::Vector3d normal_add = ni + tni;
             double point_to_point_dis = (pi - tpi).norm();
@@ -1055,11 +1063,8 @@ void STDescManager::PlaneGeomrtricIcp(
                 point_to_plane < config_setting_.dis_threshold_ && point_to_point_dis < 3) {
                 useful_match++;
                 ceres::CostFunction *cost_function;
-                Eigen::Vector3d curr_point(source_cloud->points[i].x, source_cloud->points[i].y,
-                                           source_cloud->points[i].z);
-                Eigen::Vector3d curr_normal(source_cloud->points[i].normal_x,
-                                            source_cloud->points[i].normal_y,
-                                            source_cloud->points[i].normal_z);
+                Eigen::Vector3d curr_point = point2vec(source_cloud->points[i]);
+                Eigen::Vector3d curr_normal = normal2vec(source_cloud->points[i]);
 
                 cost_function = PlaneSolver::Create(curr_point, curr_normal, tpi, tni);
                 problem.AddResidualBlock(cost_function, loss_function, para_q, para_t);
