@@ -103,7 +103,7 @@ public:
 
 // for down sample function
 struct M_POINT {
-    float xyz[3];
+    Eigen::Vector3d point;
     float intensity;
     int count = 0;
 };
@@ -299,7 +299,6 @@ private:
 
     // extract corner points from pre-build voxel map and clouds
     void corner_extractor(std::unordered_map<VOXEL_LOC, OctoTree *> &voxel_map,
-                          const pcl::PointCloud<pcl::PointXYZI>::Ptr &input_cloud,
                           pcl::PointCloud<pcl::PointXYZINormal>::Ptr &corner_points);
 
     void extract_corner(const Eigen::Vector3d &proj_center,
@@ -326,7 +325,7 @@ private:
                           std::vector<std::pair<STDesc, STDesc>> &sucess_match_vec);
 
     // Get the transform between a matched std pair
-    void triangle_solver(std::pair<STDesc, STDesc> &std_pair,
+    void triangle_solver(const std::pair<STDesc, STDesc> &std_pair,
                          Eigen::Vector3d &t,
                          Eigen::Matrix3d &rot);
 
