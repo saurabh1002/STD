@@ -187,12 +187,10 @@ public:
     void init_octo_tree();
 };
 
-void down_sampling_voxel(std::vector<Eigen::Vector3d> &pl_feat, double voxel_size);
+void down_sampling_voxel(std::vector<Eigen::Vector3d> &pl_feat, const double voxel_size);
 
 pcl::PointXYZI vec2point(const Eigen::Vector3d &vec);
 Eigen::Vector3d point2vec(const pcl::PointXYZI &pi);
-
-bool attach_greater_sort(std::pair<double, int> a, std::pair<double, int> b);
 
 struct PlaneSolver {
     PlaneSolver(Eigen::Vector3d curr_point_,
@@ -202,7 +200,7 @@ struct PlaneSolver {
         : curr_point(curr_point_),
           curr_normal(curr_normal_),
           target_point(target_point_),
-          target_normal(target_normal_){};
+          target_normal(target_normal_) {};
     template <typename T>
     bool operator()(const T *q, const T *t, T *residual) const {
         Eigen::Quaternion<T> q_w_curr{q[3], q[0], q[1], q[2]};
@@ -277,11 +275,6 @@ public:
 
     // add descriptors to database
     void AddSTDescs(const std::vector<STDesc> &stds_vec);
-
-    // Geometrical optimization by plane-to-plane ico
-    void PlaneGeomrtricIcp(const pcl::PointCloud<pcl::PointXYZINormal>::Ptr &source_cloud,
-                           const pcl::PointCloud<pcl::PointXYZINormal>::Ptr &target_cloud,
-                           std::pair<Eigen::Vector3d, Eigen::Matrix3d> &transform);
 
 private:
     /*Following are sub-processing functions*/

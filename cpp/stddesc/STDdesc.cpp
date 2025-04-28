@@ -16,7 +16,7 @@
 
 #include "omp.h"
 
-void down_sampling_voxel(std::vector<Eigen::Vector3d> &pl_feat, double voxel_size) {
+void down_sampling_voxel(std::vector<Eigen::Vector3d> &pl_feat, const double voxel_size) {
     if (voxel_size < 0.01) {
         return;
     }
@@ -1008,80 +1008,6 @@ double STDescManager::plane_geometric_verify(
         }
     });
     return useful_match / source_cloud->size();
-}
-
-void STDescManager::PlaneGeomrtricIcp(
-    const pcl::PointCloud<pcl::PointXYZINormal>::Ptr &source_cloud,
-    const pcl::PointCloud<pcl::PointXYZINormal>::Ptr &target_cloud,
-    std::pair<Eigen::Vector3d, Eigen::Matrix3d> &transform) {
-    pcl::KdTreeFLANN<pcl::PointXYZ>::Ptr kd_tree(new pcl::KdTreeFLANN<pcl::PointXYZ>);
-    pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud(new pcl::PointCloud<pcl::PointXYZ>);
-    for (size_t i = 0; i < target_cloud->size(); i++) {
-        pcl::PointXYZ pi;
-        pi.x = target_cloud->points[i].x;
-        pi.y = target_cloud->points[i].y;
-        pi.z = target_cloud->points[i].z;
-        input_cloud->push_back(pi);
-    }
-    kd_tree->setInputCloud(input_cloud);
-    ceres::Manifold *quaternion_manifold = new ceres::EigenQuaternionManifold;
-    ceres::Problem problem;
-    ceres::LossFunction *loss_function = nullptr;
-    Eigen::Matrix3d rot = transform.second;
-    Eigen::Quaterniond q(rot);
-    Eigen::Vector3d t = transform.first;
-    double para_q[4] = {q.x(), q.y(), q.z(), q.w()};
-    double para_t[3] = {t(0), t(1), t(2)};
-    problem.AddParameterBlock(para_q, 4, quaternion_manifold);
-    problem.AddParameterBlock(para_t, 3);
-    Eigen::Map<Eigen::Quaterniond> q_last_curr(para_q);
-    Eigen::Map<Eigen::Vector3d> t_last_curr(para_t);
-    std::vector<int> pointIdxNKNSearch(1);
-    std::vector<float> pointNKNSquaredDistance(1);
-    int useful_match = 0;
-    for (size_t i = 0; i < source_cloud->size(); i++) {
-        pcl::PointXYZINormal searchPoint = source_cloud->points[i];
-        Eigen::Vector3d pi = point2vec(searchPoint);
-        pi = rot * pi + t;
-        pcl::PointXYZ use_search_point;
-        use_search_point.x = pi[0];
-        use_search_point.y = pi[1];
-        use_search_point.z = pi[2];
-        Eigen::Vector3d ni(searchPoint.normal_x, searchPoint.normal_y, searchPoint.normal_z);
-        ni = rot * ni;
-        if (kd_tree->nearestKSearch(use_search_point, 1, pointIdxNKNSearch,
-                                    pointNKNSquaredDistance) > 0) {
-            pcl::PointXYZINormal nearstPoint = target_cloud->points[pointIdxNKNSearch[0]];
-            Eigen::Vector3d tpi = point2vec(nearstPoint);
-            Eigen::Vector3d tni = normal2vec(nearstPoint);
-            Eigen::Vector3d normal_inc = ni - tni;
-            Eigen::Vector3d normal_add = ni + tni;
-            double point_to_point_dis = (pi - tpi).norm();
-            double point_to_plane = fabs(tni.transpose() * (pi - tpi));
-            if ((normal_inc.norm() < config_setting_.normal_threshold_ ||
-                 normal_add.norm() < config_setting_.normal_threshold_) &&
-                point_to_plane < config_setting_.dis_threshold_ && point_to_point_dis < 3) {
-                useful_match++;
-                ceres::CostFunction *cost_function;
-                Eigen::Vector3d curr_point = point2vec(source_cloud->points[i]);
-                Eigen::Vector3d curr_normal = normal2vec(source_cloud->points[i]);
-
-                cost_function = PlaneSolver::Create(curr_point, curr_normal, tpi, tni);
-                problem.AddResidualBlock(cost_function, loss_function, para_q, para_t);
-            }
-        }
-    }
-    ceres::Solver::Options options;
-    options.linear_solver_type = ceres::SPARSE_NORMAL_CHOLESKY;
-    options.max_num_iterations = 100;
-    options.minimizer_progress_to_stdout = false;
-    ceres::Solver::Summary summary;
-    ceres::Solve(options, &problem, &summary);
-    Eigen::Quaterniond q_opt(para_q[3], para_q[0], para_q[1], para_q[2]);
-    rot = q_opt.toRotationMatrix();
-    t << t_last_curr(0), t_last_curr(1), t_last_curr(2);
-    transform.first = t;
-    transform.second = rot;
 }
 
 int STDescManager::ProcessNewScan(const std::vector<Eigen::Vector3d> &pcl) {
