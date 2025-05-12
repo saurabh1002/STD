@@ -264,6 +264,8 @@ public:
     /*Three main processing functions*/
 
     int ProcessNewScan(const std::vector<Eigen::Vector3d> &pcl);
+    void AddToDatabase(const std::vector<Eigen::Vector3d> &pcl);
+    int ComputeClosure(const std::vector<Eigen::Vector3d> &pcl);
 
     std::tuple<int, double, Eigen::Vector3d, Eigen::Matrix3d> GetClosureDataAtIdx(int idx);
     // generate STDescs from a point cloud

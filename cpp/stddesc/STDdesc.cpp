@@ -1024,6 +1024,24 @@ int STDescManager::ProcessNewScan(const std::vector<Eigen::Vector3d> &pcl) {
     return loop_match_ids_.size();
 }
 
+void STDescManager::AddToDatabase(const std::vector<Eigen::Vector3d> &pcl) {
+    pcl::PointCloud<pcl::PointXYZI>::Ptr current_cloud = EigenToPCL(pcl);
+
+    std::vector<STDesc> stds_vec;
+    this->GenerateSTDescs(current_cloud, stds_vec);
+    this->AddSTDescs(stds_vec);
+    keyCloudInd++;
+}
+
+int STDescManager::ComputeClosure(const std::vector<Eigen::Vector3d> &pcl) {
+    pcl::PointCloud<pcl::PointXYZI>::Ptr current_cloud = EigenToPCL(pcl);
+
+    std::vector<STDesc> stds_vec;
+    this->GenerateSTDescs(current_cloud, stds_vec);
+    this->SearchLoop(stds_vec);
+    return loop_match_ids_.size();
+}
+
 std::tuple<int, double, Eigen::Vector3d, Eigen::Matrix3d> STDescManager::GetClosureDataAtIdx(
     int idx) {
     return {loop_match_ids_[idx], loop_match_scores_[idx], loop_trs_[idx], loop_rots_[idx]};

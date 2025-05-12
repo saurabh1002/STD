@@ -33,9 +33,18 @@ class STDesc:
         self._config = config
         self._pipeline = stddesc_pybind._STDescManager(self._config.model_dump())
 
-    def process_new_scan(self, scan: np.ndarray) -> Tuple[int, float]:
+    def process_new_scan(self, scan: np.ndarray):
         scan = stddesc_pybind._VectorEigen3d(scan)
         num_matches = self._pipeline._ProcessNewScan(scan)
+        return num_matches
+
+    def add_to_database(self, scan: np.ndarray):
+        scan = stddesc_pybind._VectorEigen3d(scan)
+        num_matches = self._pipeline._AddToDatabase(scan)
+    
+    def compute_closures(self, scan: np.ndarray):
+        scan = stddesc_pybind._VectorEigen3d(scan)
+        num_matches = self._pipeline._ComputeClosure(scan)
         return num_matches
 
     def get_closure_data(self, idx: int) -> Tuple[int, float, np.ndarray]:

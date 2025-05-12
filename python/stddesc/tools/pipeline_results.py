@@ -55,9 +55,7 @@ class Metrics:
 
 
 class PipelineResults:
-    def __init__(self, gt_closures: np.ndarray, dataset_name: str):
-        self._dataset_name = dataset_name
-
+    def __init__(self, gt_closures: np.ndarray):
         self.closure_list: List[Tuple[int]] = []
         self.scores_list: List[float] = []
         self.metrics = []
