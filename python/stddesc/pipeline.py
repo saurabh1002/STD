@@ -41,6 +41,10 @@ def transform_points(pcd, T):
     t = T[:3, -1]
     return pcd @ R.T + t
 
+def scan_to_map(scan_query, scan_ref, local_maps_scan_range):
+    map_query = np.where((scan_query >= local_maps_scan_range[:, 0]) & (scan_query < local_maps_scan_range[:, 1]))[0][0]
+    map_ref = np.where((scan_ref >= local_maps_scan_range[:, 0]) & (scan_ref < local_maps_scan_range[:, 1]))[0][0]
+    return map_query, map_ref
 
 class STDescPipeline:
     def __init__(
@@ -68,11 +72,9 @@ class STDescPipeline:
         self.dataset_name = self._dataset.sequence_id
 
         self.gt_closure_indices = self._dataset.gt_closure_indices
+        self.local_maps_scan_range = self._dataset.local_maps_scan_range
 
-        self.closure_distance_threshold = 25
-        self.results = PipelineResults(
-            self.gt_closure_indices, self.dataset_name, self.closure_distance_threshold
-        )
+        self.results = PipelineResults(self.gt_closure_indices, self.dataset_name)
 
     def run(self):
         self._run_pipeline()
@@ -96,7 +98,7 @@ class STDescPipeline:
                 frame, timestamps = self._dataset[i]
             except ValueError:
                 frame = self._dataset[i]
-                timestamps = np.zeros(len(frame))
+                timestamps = np.array([])
 
             frame, _ = self._odometry.register_frame(frame, timestamps)
             pose = self._odometry.last_pose
@@ -126,15 +128,13 @@ class STDescPipeline:
                                 np.linalg.inv(relative_tf).flatten(),
                             ]
                         )
-                    self.results.append(
-                        self.map_scan_indices[ref_idx],
-                        self.map_scan_indices[query_idx],
-                        self.map_scan_poses[ref_idx],
-                        self.map_scan_poses[query_idx],
-                        relative_tf,
-                        self.closure_distance_threshold,
-                        score,
-                    )
+                    for ref_id in self.map_scan_indices[ref_idx]:
+                        for query_id in self.map_scan_indices[query_idx]:
+                            map_query, map_ref = scan_to_map(
+                                query_id, ref_id, self.local_maps_scan_range
+                            )
+                            if map_query - map_ref > 3:
+                                self.results.append(map_ref, map_query, score)
 
                 temp_cloud.clear()
                 query_scan_indices.clear()
@@ -146,7 +146,7 @@ class STDescPipeline:
                 query_scan_poses.append(pose)
 
     def _run_evaluation(self):
-        self.results.compute_closures_and_metrics()
+        self.results.compute_metrics()
 
     def _log_to_file(self):
         self.results_dir = self._create_results_dir()

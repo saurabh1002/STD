@@ -103,7 +103,7 @@ public:
 
 // for down sample function
 struct M_POINT {
-    float xyz[3];
+    Eigen::Vector3d point;
     float intensity;
     int count = 0;
 };
@@ -187,12 +187,10 @@ public:
     void init_octo_tree();
 };
 
-void down_sampling_voxel(std::vector<Eigen::Vector3d> &pl_feat, double voxel_size);
+void down_sampling_voxel(std::vector<Eigen::Vector3d> &pl_feat, const double voxel_size);
 
 pcl::PointXYZI vec2point(const Eigen::Vector3d &vec);
 Eigen::Vector3d point2vec(const pcl::PointXYZI &pi);
-
-bool attach_greater_sort(std::pair<double, int> a, std::pair<double, int> b);
 
 struct PlaneSolver {
     PlaneSolver(Eigen::Vector3d curr_point_,
@@ -202,7 +200,7 @@ struct PlaneSolver {
         : curr_point(curr_point_),
           curr_normal(curr_normal_),
           target_point(target_point_),
-          target_normal(target_normal_){};
+          target_normal(target_normal_) {};
     template <typename T>
     bool operator()(const T *q, const T *t, T *residual) const {
         Eigen::Quaternion<T> q_w_curr{q[3], q[0], q[1], q[2]};
@@ -266,10 +264,12 @@ public:
     /*Three main processing functions*/
 
     int ProcessNewScan(const std::vector<Eigen::Vector3d> &pcl);
+    void AddToDatabase(const std::vector<Eigen::Vector3d> &pcl);
+    int ComputeClosure(const std::vector<Eigen::Vector3d> &pcl);
 
     std::tuple<int, double, Eigen::Vector3d, Eigen::Matrix3d> GetClosureDataAtIdx(int idx);
     // generate STDescs from a point cloud
-    void GenerateSTDescs(pcl::PointCloud<pcl::PointXYZI>::Ptr &input_cloud,
+    void GenerateSTDescs(const pcl::PointCloud<pcl::PointXYZI>::Ptr &input_cloud,
                          std::vector<STDesc> &stds_vec);
 
     // search result <candidate_id, plane icp score>. -1 for no loop
@@ -277,11 +277,6 @@ public:
 
     // add descriptors to database
     void AddSTDescs(const std::vector<STDesc> &stds_vec);
-
-    // Geometrical optimization by plane-to-plane ico
-    void PlaneGeomrtricIcp(const pcl::PointCloud<pcl::PointXYZINormal>::Ptr &source_cloud,
-                           const pcl::PointCloud<pcl::PointXYZINormal>::Ptr &target_cloud,
-                           std::pair<Eigen::Vector3d, Eigen::Matrix3d> &transform);
 
 private:
     /*Following are sub-processing functions*/
@@ -299,7 +294,6 @@ private:
 
     // extract corner points from pre-build voxel map and clouds
     void corner_extractor(std::unordered_map<VOXEL_LOC, OctoTree *> &voxel_map,
-                          const pcl::PointCloud<pcl::PointXYZI>::Ptr &input_cloud,
                           pcl::PointCloud<pcl::PointXYZINormal>::Ptr &corner_points);
 
     void extract_corner(const Eigen::Vector3d &proj_center,
@@ -326,7 +320,7 @@ private:
                           std::vector<std::pair<STDesc, STDesc>> &sucess_match_vec);
 
     // Get the transform between a matched std pair
-    void triangle_solver(std::pair<STDesc, STDesc> &std_pair,
+    void triangle_solver(const std::pair<STDesc, STDesc> &std_pair,
                          Eigen::Vector3d &t,
                          Eigen::Matrix3d &rot);
 

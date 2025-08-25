@@ -40,10 +40,18 @@ class IPBCarDataset:
 
         try:
             self.gt_closure_indices = np.loadtxt(
-                os.path.join(self.sequence_dir, "loop_closure", "gt_closures.txt")
+                os.path.join(self.sequence_dir, "loop_closure", "local_map_gt_closures.txt")
             )
+            self.local_maps_scan_range = np.load(
+                os.path.join(self.sequence_dir, "MapClosures", "local_maps_scan_index_range.npy")
+            )
+            self.kiss_poses = np.load(
+                os.path.join(self.sequence_dir, "MapClosures", "kiss_poses.npy")
+            )
+
         except FileNotFoundError:
             self.gt_closure_indices = None
+            self.local_maps_scan_range = None
 
         if len(self.scan_files) == 0:
             raise ValueError(f"Tried to read point cloud files in {data_dir} but none found")

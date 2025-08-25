@@ -38,10 +38,17 @@ class MulranDataset:
 
         try:
             self.gt_closure_indices = np.loadtxt(
-                os.path.join(self.sequence_dir, "loop_closure", "gt_closures.txt")
+                os.path.join(self.sequence_dir, "loop_closure", "local_map_gt_closures.txt")
+            )
+            self.local_maps_scan_range = np.load(
+                os.path.join(self.sequence_dir, "MapClosures", "local_maps_scan_index_range.npy")
+            )
+            self.kiss_poses = np.load(
+                os.path.join(self.sequence_dir, "MapClosures", "kiss_poses.npy")
             )
         except FileNotFoundError:
             self.gt_closure_indices = None
+            self.local_maps_scan_range = None
 
     def __len__(self):
         return len(self.scan_files)
@@ -54,9 +61,9 @@ class MulranDataset:
         timestamps = self.get_timestamps()
         if points.shape[0] != timestamps.shape[0]:
             # MuRan has some broken point clouds, just fallback to no timestamps
-            return points.astype(np.float64), np.ones(points.shape[0])
+            return points.astype(np.float64), np.array([])
         return points.astype(np.float64), timestamps
-    
+
     @staticmethod
     def get_timestamps():
         H = 64

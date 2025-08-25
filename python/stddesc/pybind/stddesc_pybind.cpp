@@ -89,6 +89,8 @@ PYBIND11_MODULE(stddesc_pybind, m) {
              }),
              "config"_a)
         .def("_ProcessNewScan", &STDescManager::ProcessNewScan, "pcl"_a)
+        .def("_AddToDatabase", &STDescManager::AddToDatabase, "pcl"_a)
+        .def("_ComputeClosure", &STDescManager::ComputeClosure, "pcl"_a)
         .def(
             "_GetClosureDataAtIdx",
             [](STDescManager &self, int idx) { return self.GetClosureDataAtIdx(idx); }, "idx"_a);

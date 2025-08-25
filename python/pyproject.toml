@@ -13,6 +13,7 @@ dependencies = [
 
 [project.scripts]
 stdesc_pipeline = "stddesc.tools.cmd:run"
+stdesc_multisession_pipeline = "stddesc.tools.cmd:run_multisession"
 
 [tool.scikit-build]
 build-dir = "build/{wheel_tag}"

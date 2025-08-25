@@ -107,3 +107,86 @@ def stdesc_pipeline(
 
 def run():
     app()
+
+
+app_multi = typer.Typer(add_completion=False, rich_markup_mode="rich")
+
+@app_multi.command(help=docstring)
+def stdesc_multisession_pipeline(
+    dataloader_ref: str = typer.Argument(
+        None,
+        show_default=False,
+        case_sensitive=False,
+        help="Use a specific dataloader from those supported by MapClosures",
+    ),
+    data_ref: Path = typer.Argument(
+        ...,
+        help="The data directory used by the specified dataloader",
+        show_default=False,
+    ),
+    dataloader_query: str = typer.Argument(
+        None,
+        show_default=False,
+        case_sensitive=False,
+        help="Use a specific dataloader from those supported by MapClosures",
+    ),
+    data_query: Path = typer.Argument(
+        ...,
+        help="The data directory used by the specified dataloader",
+        show_default=False,
+    ),
+    results_dir: Path = typer.Argument(
+        ...,
+        help="The path where results are to be stored",
+        show_default=False,
+        exists=False,
+    ),
+    config: Optional[Path] = typer.Option(
+        None,
+        "--config",
+        exists=True,
+        show_default=False,
+        help="[Optional] Path to the configuration file",
+    ),
+    # Aditional Options ---------------------------------------------------------------------------
+    sequence_ref: Optional[str] = typer.Option(
+        None,
+        "--sequence_ref",
+        "-s1",
+        show_default=False,
+        help="[Optional] For some dataloaders, you need to specify a given sequence",
+        rich_help_panel="Additional Options",
+    ),
+    sequence_query: Optional[str] = typer.Option(
+        None,
+        "--sequence_query",
+        "-s2",
+        show_default=False,
+        help="[Optional] For some dataloaders, you need to specify a given sequence",
+        rich_help_panel="Additional Options",
+    ),
+):
+    # Lazy-loading for faster CLI
+    from stddesc.datasets import dataset_factory
+    from stddesc.multisession_pipeline import STDescPipeline
+
+    STDescPipeline(
+        dataset_query=dataset_factory(
+            dataloader=dataloader_query,
+            data_dir=data_query,
+            # Additional options
+            sequence=sequence_query,
+        ),
+        dataset_ref=dataset_factory(
+            dataloader=dataloader_ref,
+            data_dir=data_ref,
+            # Additional options
+            sequence=sequence_ref,
+        ),
+        results_dir=results_dir,
+        config=config,
+    ).run().print()
+
+
+def run_multisession():
+    app_multi()
