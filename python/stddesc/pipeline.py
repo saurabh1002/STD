@@ -108,7 +108,7 @@ class STDescPipeline:
             frame_downsample = voxel_down_sample(frame, self.config.ds_size)
             delta_map_odom = np.linalg.inv(start_pose) @ pose
             temp_cloud.append(transform_points(frame_downsample, delta_map_odom))
-            if np.linalg.norm(delta_map_odom[:3, -1]) > 10.0 or (i == self._last - 1):
+            if np.linalg.norm(delta_map_odom[:3, -1]) > 100.0 or (i == self._last - 1):
                 query_scan_indices.append(i)
                 query_scan_poses.append(pose)
                 self.map_scan_indices.append(np.array(query_scan_indices))
