@@ -65,8 +65,6 @@ class STDescPipeline:
         self.config = load_config(config)
         self.std_desc = STDesc(self.config)
 
-        self.map_scan_indices = []
-        self.map_scan_poses = []
         self.closures = []
 
         self.dataset_name = self._dataset.sequence_id
@@ -89,9 +87,7 @@ class STDescPipeline:
         start_pose_flag = True
         start_pose = np.eye(4)
         temp_cloud = []
-        query_scan_indices = []
-        query_scan_poses = []
-        query_idx = 0
+        map_query = 0
 
         for i in get_progress_bar(self._first, self._last):
             try:
@@ -109,41 +105,24 @@ class STDescPipeline:
             delta_map_odom = np.linalg.inv(start_pose) @ pose
             temp_cloud.append(transform_points(frame_downsample, delta_map_odom))
             if np.linalg.norm(delta_map_odom[:3, -1]) > 100.0 or (i == self._last - 1):
-                query_scan_indices.append(i)
-                query_scan_poses.append(pose)
-                self.map_scan_indices.append(np.array(query_scan_indices))
-                self.map_scan_poses.append(np.array(query_scan_poses))
-
                 local_map = np.concatenate(temp_cloud)
                 num_matches = self.std_desc.process_new_scan(local_map)
                 for match_idx in range(num_matches):
-                    ref_idx, score, relative_tf = self.std_desc.get_closure_data(match_idx)
+                    map_ref, score, relative_tf = self.std_desc.get_closure_data(match_idx)
                     if score > 0.6:
                         self.closures.append(
                             np.r_[
-                                ref_idx,
-                                query_idx,
-                                self.map_scan_indices[ref_idx][0],
-                                self.map_scan_indices[query_idx][0],
+                                map_ref,
+                                map_query,
                                 np.linalg.inv(relative_tf).flatten(),
                             ]
                         )
-                    for ref_id in self.map_scan_indices[ref_idx]:
-                        for query_id in self.map_scan_indices[query_idx]:
-                            map_query, map_ref = scan_to_map(
-                                query_id, ref_id, self.local_maps_scan_range
-                            )
-                            if map_query - map_ref > 3:
-                                self.results.append(map_ref, map_query, score)
+                    if map_query - map_ref > 3:
+                        self.results.append(map_ref, map_query, score)
 
                 temp_cloud.clear()
-                query_scan_indices.clear()
-                query_scan_poses.clear()
                 start_pose_flag = True
-                query_idx += 1
-            else:
-                query_scan_indices.append(i)
-                query_scan_poses.append(pose)
+                map_query += 1
 
     def _run_evaluation(self):
         self.results.compute_metrics()
