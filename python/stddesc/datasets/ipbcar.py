@@ -45,6 +45,9 @@ class IPBCarDataset:
             self.local_maps_scan_range = np.load(
                 os.path.join(self.sequence_dir, "MapClosures", "local_maps_scan_index_range.npy")
             )
+            self.kiss_poses = np.load(
+                os.path.join(self.sequence_dir, "MapClosures", "kiss_poses.npy")
+            )
 
         except FileNotFoundError:
             self.gt_closure_indices = None

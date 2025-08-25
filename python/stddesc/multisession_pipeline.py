@@ -26,8 +26,6 @@ from pathlib import Path
 from typing import Optional
 
 import numpy as np
-from kiss_icp.config import KISSConfig
-from kiss_icp.kiss_icp import KissICP
 from kiss_icp.voxelization import voxel_down_sample
 
 from stddesc.stddesc import STDesc
@@ -74,9 +72,6 @@ class STDescPipeline:
             else os.path.basename(self._ref_dataset.data_dir)
         )
 
-        self._kiss_config = KISSConfig()
-        self._kiss_config.mapping.voxel_size = self._kiss_config.data.max_range / 100.0
-
         self.results_dir = results_dir
         self.config = load_config(config)
         self.std_desc = STDesc(self.config)
@@ -112,7 +107,6 @@ class STDescPipeline:
         return self.results
 
     def _run_pipeline(self):
-        odometry = KissICP(self._kiss_config)
         start_pose_flag = True
         start_pose = np.eye(4)
         temp_cloud = []
@@ -120,13 +114,11 @@ class STDescPipeline:
 
         for i in get_progress_bar(0, len(self._ref_dataset)):
             try:
-                frame, timestamps = self._ref_dataset[i]
+                frame, _ = self._ref_dataset[i]
             except ValueError:
                 frame = self._ref_dataset[i]
-                timestamps = np.array([])
 
-            frame, _ = odometry.register_frame(frame, timestamps)
-            pose = odometry.last_pose
+            pose = self._ref_dataset.kiss_poses[i]
             if start_pose_flag:
                 start_pose = np.copy(pose)
                 start_pose_flag = False
@@ -146,7 +138,6 @@ class STDescPipeline:
             else:
                 ref_scan_indices.append(i)
 
-        odometry = KissICP(self._kiss_config)
         start_pose_flag = True
         start_pose = np.eye(4)
         query_scan_indices = []
@@ -154,13 +145,11 @@ class STDescPipeline:
 
         for i in get_progress_bar(0, len(self._query_dataset)):
             try:
-                frame, timestamps = self._query_dataset[i]
+                frame, _ = self._query_dataset[i]
             except ValueError:
                 frame = self._query_dataset[i]
-                timestamps = np.array([])
 
-            frame, _ = odometry.register_frame(frame, timestamps)
-            pose = odometry.last_pose
+            pose = self._query_dataset.kiss_poses[i]
             if start_pose_flag:
                 start_pose = np.copy(pose)
                 start_pose_flag = False

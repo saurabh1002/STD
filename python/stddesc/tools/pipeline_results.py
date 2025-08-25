@@ -61,7 +61,7 @@ class PipelineResults:
         self.metrics = []
 
         gt_closures = gt_closures if gt_closures.shape[1] == 2 else gt_closures.T
-        self.gt_closures: Set[Tuple[int]] = set(map(lambda x: tuple(sorted(x)), gt_closures))
+        self.gt_closures: Set[Tuple[int]] = set(map(lambda x: tuple(x), gt_closures))
 
     def print(self):
         self.log_to_console()
