@@ -72,7 +72,7 @@ class STDescPipeline:
         self.gt_closure_indices = self._dataset.gt_closure_indices
         self.local_maps_scan_range = self._dataset.local_maps_scan_range
 
-        self.results = PipelineResults(self.gt_closure_indices, self.dataset_name)
+        self.results = PipelineResults(self.gt_closure_indices)
 
     def run(self):
         self._run_pipeline()
