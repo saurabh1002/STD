@@ -54,20 +54,8 @@ class HeLiPRDataset:
             self.gt_closure_indices = None
             self.local_maps_scan_range = None
         
-        stamp_field = None
-        try_pcd = o3d.t.io.read_point_cloud(self.scan_files[0])
-        try:
-            try_pcd.point["timestamps"]
-            stamp_field = "timestamps"
-            print("Found timestamps")
-            break
-        except:
-            continue
-
-        if stamp_field is None:
-            self.get_timestamps = lambda _: np.array([])
-        else:
-            self.get_timestamps = lambda pcd: pcd.point[stamp_field].numpy().ravel()
+        stamp_field = "timestamps"
+        self.get_timestamps = lambda pcd: pcd.point[stamp_field].numpy().ravel()
 
     def __len__(self):
         return len(self.scan_files)
