@@ -200,7 +200,7 @@ struct PlaneSolver {
         : curr_point(curr_point_),
           curr_normal(curr_normal_),
           target_point(target_point_),
-          target_normal(target_normal_) {};
+          target_normal(target_normal_){};
     template <typename T>
     bool operator()(const T *q, const T *t, T *residual) const {
         Eigen::Quaternion<T> q_w_curr{q[3], q[0], q[1], q[2]};
