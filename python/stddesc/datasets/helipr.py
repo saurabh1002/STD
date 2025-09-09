@@ -53,19 +53,31 @@ class HeLiPRDataset:
         except FileNotFoundError:
             self.gt_closure_indices = None
             self.local_maps_scan_range = None
+        
+        stamp_field = None
+        try_pcd = o3d.t.io.read_point_cloud(self.scan_files[0])
+        try:
+            try_pcd.point["timestamps"]
+            stamp_field = "timestamps"
+            print("Found timestamps")
+            break
+        except:
+            continue
+
+        if stamp_field is None:
+            self.get_timestamps = lambda _: np.array([])
+        else:
+            self.get_timestamps = lambda pcd: pcd.point[stamp_field].numpy().ravel()
 
     def __len__(self):
         return len(self.scan_files)
 
     def __getitem__(self, idx):
-        return self.read_point_cloud(idx)
+        return self.get_data(idx)
 
     def get_data(self, idx: int):
         file_path = self.scan_files[idx]
-        pcd = o3d.io.read_point_cloud(file_path)
-        return np.asarray(pcd.points)
+        pcd = o3d.t.io.read_point_cloud(file_path)
+        points = pcd.point.positions.numpy()
 
-    def read_point_cloud(self, idx: int):
-        data = self.get_data(idx)
-        points = data[:, :3]
-        return points.astype(np.float64)
+        return points, self.get_timestamps(pcd)
