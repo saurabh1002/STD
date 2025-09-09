@@ -8,7 +8,7 @@
     </div>
     <font color=#a0a0a0 size=2>A typical place recognition case with STD. These two frames of point clouds are collected by a small FOV LiDAR (Livox Avia) moving in opposite directions, resulting in a low point cloud overlap and drastic viewpoint change.</font>
 </div>
-  
+
 
 ## **1.1. Developers:**
 The codes of this repo are contributed by:
@@ -16,7 +16,7 @@ The codes of this repo are contributed by:
 
 
 ## **1.2. Related paper**
-Our paper has been accepted to [**ICRA2023**](https://www.icra2023.org/), and our preprint version is now available on **arxiv**:  
+Our paper has been accepted to [**ICRA2023**](https://www.icra2023.org/), and our preprint version is now available on **arxiv**:
 [STD: Stable Triangle Descriptor for 3D place recognition](https://arxiv.org/abs/2209.12435)
 
 
@@ -63,13 +63,13 @@ Departure from the purpose of convenience, we provide two sets of data for your 
 
 ### **2.5.2. LiDAR Point cloud data**
 - For the ***Kitti dataset*** (i.e., our Example-1), we read the raw scan data with suffix *".bin"*. These raw LiDAR scan data can be downloaded from the [Kitti Odometry benchmark website](https://www.cvlibs.net/datasets/kitti/eval_odometry.php).
-- For the ***solid-state LiDAR dataset*** (i.e., our Example-2), we read the undistort scan data from the recorded *rosbag* files, whose bag file contains undistort LiDAR scan data in *rostopic: "/cloud_undistort"* 
+- For the ***solid-state LiDAR dataset*** (i.e., our Example-2), we read the undistort scan data from the recorded *rosbag* files, whose bag file contains undistort LiDAR scan data in *rostopic: "/cloud_undistort"*
 ### **2.5.3. Point cloud registration pose**
 In the [poses file](https://connecthkuhk-my.sharepoint.com/:f:/g/personal/ycj1_connect_hku_hk/EgnGX4jC2zxDi-45YCfbioEBpPCfBVxa2LcrE-90oL4u_A?e=Lb4Yvv), the poses for LiDAR point cloud registration are given in the following data format:
 ```
 Timestamp pos_x pos_y pos_z quat_x quat_y quat_z quat_w
 ```
-where, ``Timestamp`` is the correspond sampling time stamp of a LiDAR scan, ``pose_{x,y,z}`` and ``quad_{x,y,z,w}`` are the translation and rotation (expressed used quaternion) of pose. 
+where, ``Timestamp`` is the correspond sampling time stamp of a LiDAR scan, ``pose_{x,y,z}`` and ``quad_{x,y,z,w}`` are the translation and rotation (expressed used quaternion) of pose.
 # **3. Examples**
 This reposity contains implementations of Stable Triangle Descriptor, as well as demos for place recognition and loop closure correction. For the **complete pipline of online LiDAR SLAM**, we will release this code along with the release of the **extended version**.
 
@@ -130,7 +130,7 @@ roslaunch std_detector demo_pgo.launch
     </div>
 </div>
 
-To run Example-4, you need to install and configure [FAST-LIO2](https://github.com/hku-mars/FAST_LIO) first. 
+To run Example-4, you need to install and configure [FAST-LIO2](https://github.com/hku-mars/FAST_LIO) first.
 You can try the data `building_slower_motino_avia.bag` [here](https://drive.google.com/drive/folders/1EqNt6Bm_6Jf3beRf_RI3yrhiUCND09se)(provided by [zlwang7](https://github.com/zlwang7/S-FAST_LIO)), which is outdoor scan data with no loop closure other than the one between the starting point and the endpoint. Therefore, relying solely on the fast-lio algorithm results in obvious Z-axis drift, with STD loop detection and graph optimization, there will be a noticeable correction to the drift.
 
 ```
