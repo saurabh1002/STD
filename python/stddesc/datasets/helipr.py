@@ -54,12 +54,6 @@ class HeLiPRDataset:
             self.gt_closure_indices = None
             self.local_maps_scan_range = None
 
-        stamp_field = "timestamps"
-        self.get_timestamps = lambda pcd: pcd.point[stamp_field].numpy().ravel()
-
-        if sequence == "Aeva":
-            self.get_timestamps = lambda _: np.array([])
-
     def __len__(self):
         return len(self.scan_files)
 
@@ -71,4 +65,4 @@ class HeLiPRDataset:
         pcd = o3d.t.io.read_point_cloud(file_path)
         points = pcd.point.positions.numpy()
 
-        return points, self.get_timestamps(pcd)
+        return points, np.array([])

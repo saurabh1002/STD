@@ -56,22 +56,6 @@ class IPBCarDataset:
         if len(self.scan_files) == 0:
             raise ValueError(f"Tried to read point cloud files in {data_dir} but none found")
 
-        stamps_keys = ["t", "timestamp", "timestamps", "time", "stamps"]
-        stamp_field = None
-        try_pcd = o3d.t.io.read_point_cloud(self.scan_files[0])
-        for key in stamps_keys:
-            try:
-                try_pcd.point[key]
-                stamp_field = key
-                print("Found timestamps")
-                break
-            except:
-                continue
-        if stamp_field is None:
-            self.get_timestamps = lambda _: np.array([])
-        else:
-            self.get_timestamps = lambda pcd: pcd.point[stamp_field].numpy().ravel()
-
     def __len__(self):
         return len(self.scan_files)
 
@@ -83,7 +67,7 @@ class IPBCarDataset:
         pcd = o3d.t.io.read_point_cloud(file_path)
         points = pcd.point.positions.numpy()
 
-        return points, self.get_timestamps(pcd)
+        return points, np.array([])
 
     def load_poses(self, poses_file):
         poses = np.load(poses_file)
